@@ -13,6 +13,7 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
+        
         $devices = $user->devices()->where('is_active', true)->get();
         
         // Get latest readings
@@ -49,14 +50,17 @@ class DashboardController extends Controller
 
         $readings24h = $device->readingsLast24Hours();
         $alerts = $device->alerts()->latest()->take(20)->get();
-        $cameraImages = $device->cameraImages()->latest()->take(10)->get();
+        $threshold = $device->safetyThreshold; // FIX: Explicitly get threshold
+        $latestReading = $device->latestReading();
+        $latestImage = $device->latestCameraImage(); // Get latest image
 
         return view('dashboard.device', [
             'device' => $device,
             'readings24h' => $readings24h,
             'alerts' => $alerts,
-            'cameraImages' => $cameraImages,
-            'latestReading' => $device->latestReading(),
+            'threshold' => $threshold,
+            'latestReading' => $latestReading,
+            'latestImage' => $latestImage, // Pass image to view
         ]);
     }
 }

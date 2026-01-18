@@ -42,7 +42,7 @@ class DeviceController extends Controller
             'gas_critical' => 800,
         ]);
 
-        return redirect('/devices')->with('success', 'Device added successfully!');
+        return redirect('/devices')->with('success', 'Device created successfully!');
     }
 
     public function show(Device $device)
@@ -50,11 +50,7 @@ class DeviceController extends Controller
         if ($device->user_id !== Auth::id()) {
             abort(403);
         }
-
-        return view('devices.show', [
-            'device' => $device,
-            'threshold' => $device->safetyThreshold,
-        ]);
+        return view('devices.show', ['device' => $device]);
     }
 
     public function edit(Device $device)
@@ -62,7 +58,6 @@ class DeviceController extends Controller
         if ($device->user_id !== Auth::id()) {
             abort(403);
         }
-
         return view('devices.edit', ['device' => $device]);
     }
 
@@ -73,14 +68,14 @@ class DeviceController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string',
+            'name' => 'required|string|max:255',
             'location' => 'required|string',
             'description' => 'nullable|string',
         ]);
 
         $device->update($validated);
 
-        return redirect("/devices/{$device->id}")->with('success', 'Device updated!');
+        return redirect("/devices/{$device->id}")->with('success', 'Device updated successfully!');
     }
 
     public function destroy(Device $device)
@@ -93,7 +88,6 @@ class DeviceController extends Controller
         return redirect('/devices')->with('success', 'Device deleted!');
     }
 
-    // Update thresholds for a device
     public function updateThresholds(Request $request, Device $device)
     {
         if ($device->user_id !== Auth::id()) {

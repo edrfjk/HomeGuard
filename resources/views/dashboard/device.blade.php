@@ -47,7 +47,41 @@
                 </div>
             </div>
         </div>
+                <!-- Latest Camera Image Card -->
+        @if($latestImage)
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-gray-100 dark:bg-gray-700 h-64 overflow-hidden relative group">
+                    <img src="{{ $latestImage->getImageUrl() }}" 
+                        alt="Latest camera capture" 
+                        class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                    
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition duration-300 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                        <a href="/camera/{{ $latestImage->id }}" 
+                        class="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition">
+                            <i class="fas fa-expand text-xl"></i>
+                        </a>
+                    </div>
 
+                    <div class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold bg-white/90 dark:bg-gray-900/90 text-gray-900 dark:text-white">
+                        {{ ucfirst($latestImage->trigger_type) }}
+                    </div>
+                </div>
+
+                <div class="p-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        <i class="fas fa-camera mr-2"></i>{{ $latestImage->created_at->format('M d, Y H:i:s') }}
+                    </p>
+                    <a href="{{ route('camera.gallery', $device) }}" class="mt-3 block text-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-semibold">
+                        <i class="fas fa-images mr-2"></i>View All Images
+                    </a>
+                </div>
+            </div>
+        @else
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+                <i class="fas fa-camera text-gray-400 dark:text-gray-600 text-3xl mb-2 block"></i>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">No camera images yet</p>
+            </div>
+        @endif
         <!-- Latest Reading Card -->
         @if($latestReading)
             <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-lg p-6 text-white">
@@ -313,5 +347,105 @@
         }
     });
 </script>
+
+<script>
+    // Refresh readings every 30 seconds
+    setInterval(function() {
+        fetch('/api/device/{{ $device->id }}/latest-reading')
+            .then(response => response.json())
+            .then(data => {
+                // Update temperature
+                document.getElementById('temp-value').textContent = data.temperature + '°C';
+                // Update humidity
+                document.getElementById('humidity-value').textContent = data.humidity + '%';
+                // Update gas
+                document.getElementById('gas-value').textContent = Math.round(data.gas_level);
+                // Update timestamp
+                document.getElementById('reading-time').textContent = 'Updated ' + new Date().toLocaleTimeString();
+            });
+    }, 30000); // Refresh every 30 seconds
+</script>
+
+<!-- Temperature Chart -->
+<script>
+    const tempCtx = document.getElementById('tempChart').getContext('2d');
+    const tempLabels = {!! json_encode($readings24h->map(fn($r) => $r->created_at->format('H:i'))->reverse()) !!};
+    const tempData = {!! json_encode($readings24h->map(fn($r) => $r->temperature)->reverse()) !!};
+
+    new Chart(tempCtx, {
+        type: 'line',
+        data: {
+            labels: tempLabels,
+            datasets: [{
+                label: 'Temperature (°C)',
+                data: tempData,
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointBackgroundColor: '#ef4444',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
+        }
+    });
+
+    // Humidity Chart
+    const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+    const humidityLabels = {!! json_encode($readings24h->map(fn($r) => $r->created_at->format('H:i'))->reverse()) !!};
+    const humidityData = {!! json_encode($readings24h->map(fn($r) => $r->humidity)->reverse()) !!};
+
+    new Chart(humidityCtx, {
+        type: 'line',
+        data: {
+            labels: humidityLabels,
+            datasets: [{
+                label: 'Humidity (%)',
+                data: humidityData,
+                borderColor: '#06b6d4',
+                backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointBackgroundColor: '#06b6d4',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    max: 100,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
+        }
+    });
+</script>
 @endsection
+
 @endsection

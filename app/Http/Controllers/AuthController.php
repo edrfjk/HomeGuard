@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Auth;
 
 class AuthController extends Controller
 {
@@ -23,11 +23,25 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->filled('remember'))) {
             $request->session()->regenerate();
-            return redirect('/dashboard');
+            
+            // Try to log login, but don't break if it fails
+            try {
+                if (class_exists(\App\Models\UserLoginHistory::class)) {
+                    \App\Models\UserLoginHistory::create([
+                        'user_id' => Auth::id(),
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Silently fail
+            }
+
+            return redirect()->intended('/dashboard');
         }
 
         return back()->withErrors([
-            'email' => 'Invalid email or password',
+            'email' => 'Invalid credentials',
         ])->onlyInput('email');
     }
 
@@ -48,11 +62,12 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'timezone' => 'UTC',
         ]);
 
         Auth::login($user);
 
-        return redirect('/dashboard');
+        return redirect('/dashboard')->with('success', 'Account created!');
     }
 
     public function logout(Request $request)
@@ -60,6 +75,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/');
     }
 }

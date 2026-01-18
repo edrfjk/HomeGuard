@@ -6,6 +6,7 @@
     <title>@yield('title', 'HomeGuard')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
@@ -104,23 +105,64 @@
 
                     <div class="flex items-center space-x-4">
                         <!-- Notifications Bell -->
-                        <div class="relative">
-                            <button class="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" 
+                                    class="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                                 <i class="fas fa-bell text-xl"></i>
-                                @if(auth()->user()->unreadCriticalAlerts() > 0)
+                                @if(auth()->user()->alerts()->where('status', 'active')->count() > 0)
                                     <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse font-bold">
-                                        {{ auth()->user()->unreadCriticalAlerts() }}
+                                        {{ auth()->user()->alerts()->where('status', 'active')->count() }}
                                     </span>
                                 @endif
                             </button>
+
+                            <!-- Notification Dropdown -->
+                            <div x-show="open" 
+                                @click.outside="open = false"
+                                class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto">
+                                
+                                <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 border-b border-blue-500">
+                                    <h3 class="font-bold text-lg">
+                                        <i class="fas fa-bell mr-2"></i>Notifications
+                                    </h3>
+                                    <p class="text-xs text-blue-200">{{ auth()->user()->alerts()->where('status', 'active')->count() }} active alerts</p>
+                                </div>
+
+                                @if(auth()->user()->alerts()->where('status', 'active')->count() > 0)
+                                    <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                                        @foreach(auth()->user()->alerts()->where('status', 'active')->latest()->take(5)->get() as $alert)
+                                            <a href="/alerts/{{ $alert->id }}" 
+                                            class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-l-4 {{ 
+                                                $alert->severity === 'critical' ? 'border-red-500' : 
+                                                ($alert->severity === 'warning' ? 'border-yellow-500' : 'border-blue-500')
+                                            }}">
+                                                <div class="flex items-start gap-3">
+                                                    <span class="text-xl">{{ $alert->getSeverityEmoji() }}</span>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="font-semibold text-gray-900 dark:text-white text-sm">{{ $alert->device->name }}</p>
+                                                        <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ $alert->message }}</p>
+                                                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">{{ $alert->created_at->diffForHumans() }}</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="border-t border-gray-200 dark:border-gray-700 p-3">
+                                        <a href="/alerts" class="block text-center text-sm font-semibold text-blue-600 hover:text-blue-700">
+                                            View All Alerts <i class="fas fa-arrow-right ml-1"></i>
+                                        </a>
+                                    </div>
+                                @else
+                                    <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2 block"></i>
+                                        <p class="text-sm">No active alerts</p>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
 
-                        <!-- Mobile Menu Button -->
-                        <button class="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                            <i class="fas fa-bars text-xl"></i>
-                        </button>
-                    </div>
-                </div>
+
             </header>
 
             <!-- Page Content -->

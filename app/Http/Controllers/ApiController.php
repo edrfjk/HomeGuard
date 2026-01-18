@@ -168,4 +168,22 @@ class ApiController extends Controller
             ]);
         }
     }
+
+    // Get latest reading for a device (for real-time updates)
+public function getLatestReading($deviceId)
+{
+    $device = Device::findOrFail($deviceId);
+    
+    if ($device->user_id !== auth()->id()) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    $reading = $device->latestReading();
+
+    if (!$reading) {
+        return response()->json(['error' => 'No readings yet'], 404);
+    }
+
+    return response()->json($reading);
+}
 }

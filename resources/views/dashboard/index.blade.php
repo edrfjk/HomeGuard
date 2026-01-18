@@ -16,7 +16,7 @@
                     <p class="text-4xl font-bold text-gray-900 dark:text-white mt-2">{{ $totalDevices }}</p>
                 </div>
                 <div class="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                    <i class="fas fa-cctv text-blue-600 dark:text-blue-300 text-2xl"></i>
+                    <i class="fa-solid fa-cctv text-blue-600 dark:text-blue-300 text-2xl"></i>
                 </div>
             </div>
             <div class="mt-4 flex items-center text-xs text-green-600">
@@ -46,7 +46,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105 animate-fadeIn" style="animation-delay: 0.2s;">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-600 dark:text-gray-400 text-sm font-semibold">Active Alerts</p>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm font-semibold">Total Alerts</p>
                     <p class="text-4xl font-bold text-orange-600 mt-2">{{ $recentAlerts->count() }}</p>
                 </div>
                 <div class="p-4 bg-orange-100 dark:bg-orange-900 rounded-full">

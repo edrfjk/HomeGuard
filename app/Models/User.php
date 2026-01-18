@@ -14,6 +14,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'timezone',
     ];
 
     protected $hidden = [
@@ -23,7 +24,6 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
     ];
 
     // Relationships
@@ -47,12 +47,22 @@ class User extends Authenticatable
         return $this->hasMany(CameraImage::class);
     }
 
-    // Count unread critical alerts
+    public function loginHistories()
+    {
+        return $this->hasMany(UserLoginHistory::class);
+    }
+
+    public function notificationPreference()
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    // Helper methods
     public function unreadCriticalAlerts()
     {
         return $this->alerts()
-            ->where('status', 'active')
             ->where('severity', 'critical')
+            ->where('status', 'active')
             ->count();
     }
 }

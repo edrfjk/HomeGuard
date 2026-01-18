@@ -1,8 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+/* FIX FOR DISAPPEARING FORMS - Remove initial opacity: 0 from animations */
+.animate-fadeIn,
+.animate-slideInLeft,
+.animate-slideInRight,
+.animate-slideUp {
+    opacity: 1 !important;
+}
 
 /* ===========================
    BASE STYLES & TYPOGRAPHY
@@ -18,7 +26,6 @@
 
 * {
     font-family: 'Poppins', sans-serif;
-    @apply transition-all duration-200;
 }
 
 html {
@@ -109,24 +116,21 @@ body {
     }
 }
 
+/* Animation classes - NOW WITH opacity: 1 by default thanks to the fix above */
 .animate-fadeIn {
     animation: fadeIn 0.6s ease-out forwards;
-    opacity: 0;
 }
 
 .animate-slideInLeft {
     animation: slideInLeft 0.6s ease-out forwards;
-    opacity: 0;
 }
 
 .animate-slideInRight {
     animation: slideInRight 0.6s ease-out forwards;
-    opacity: 0;
 }
 
 .animate-slideUp {
     animation: slideUp 0.5s ease-out forwards;
-    opacity: 0;
 }
 
 .animate-pulse-glow {
@@ -273,7 +277,8 @@ body {
 }
 
 .form-textarea {
-    @apply form-input resize-vertical min-h-32;
+    @apply form-input min-h-32;
+    resize: vertical;
 }
 
 .form-select {
@@ -436,7 +441,8 @@ body {
    =========================== */
 
 .sr-only {
-    @apply absolute w-px h-px p-0 -m-px overflow-hidden clip-[rect(0,0,0,0)] whitespace-nowrap border-0;
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
 }
 
 .focus-visible {
@@ -472,7 +478,11 @@ body {
 }
 
 .hover-glow {
-    @apply transition-all duration-300 hover:shadow-glow;
+    @apply transition-all duration-300;
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
 
 .hover-scale-105 {

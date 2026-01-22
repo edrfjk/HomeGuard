@@ -65,4 +65,6 @@ class User extends Authenticatable
             ->where('status', 'active')
             ->count();
     }
+
+    
 }

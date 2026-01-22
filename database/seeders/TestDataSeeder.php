@@ -15,11 +15,14 @@ class TestDataSeeder extends Seeder
     public function run(): void
     {
         // Create test user
-        $user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => Hash::make('password'),
-        ]);
+                $user = User::firstOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'name' => 'Test User',
+                'password' => Hash::make('password'),
+            ]
+        );
+
 
         // Create test device
         $device = Device::create([

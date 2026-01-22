@@ -2,84 +2,57 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Alert extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'user_id',
         'device_id',
-        'sensor_reading_id',
         'type',
         'severity',
+        'status',
         'message',
         'reading_value',
         'threshold_value',
-        'status',
-        'acknowledged_at',
+        'sensor_reading_id',
+        'camera_image_id',
         'resolved_at',
     ];
 
     protected $casts = [
-        'acknowledged_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
         'resolved_at' => 'datetime',
     ];
 
-    public function device()
-    {
-        return $this->belongsTo(Device::class);
-    }
-
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function sensorReading()
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
+    }
+
+    public function sensorReading(): BelongsTo
     {
         return $this->belongsTo(SensorReading::class);
     }
 
-    // Get severity badge color
-    public function getSeverityColor()
+    public function cameraImage(): BelongsTo
     {
-        return match($this->severity) {
-            'critical' => 'red',
-            'warning' => 'yellow',
-            'info' => 'blue',
-            default => 'gray',
-        };
+        return $this->belongsTo(CameraImage::class);
     }
 
-    // Get severity icon emoji
     public function getSeverityEmoji()
     {
         return match($this->severity) {
             'critical' => '🚨',
             'warning' => '⚠️',
-            'info' => 'ℹ️',
-            default => '📌',
+            default => 'ℹ️',
         };
-    }
-
-    // Acknowledge alert
-    public function acknowledge()
-    {
-        $this->update([
-            'status' => 'acknowledged',
-            'acknowledged_at' => now(),
-        ]);
-    }
-
-    // Resolve alert
-    public function resolve()
-    {
-        $this->update([
-            'status' => 'resolved',
-            'resolved_at' => now(),
-        ]);
     }
 }

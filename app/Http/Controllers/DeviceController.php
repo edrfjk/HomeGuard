@@ -75,7 +75,9 @@ class DeviceController extends Controller
 
         $device->update($validated);
 
-        return redirect("/devices/{$device->id}")->with('success', 'Device updated successfully!');
+        return redirect()->route('devices.index')
+    ->with('success', 'Device updated successfully!');
+
     }
 
     public function destroy(Device $device)

@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'HomeGuard')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -29,43 +28,49 @@
             <!-- Navigation Menu -->
             <nav class="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
                 <a href="/dashboard" 
-                   class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('dashboard') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
+                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('dashboard') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
                     <i class="fas fa-chart-line w-5"></i>
                     <span class="font-semibold">Dashboard</span>
                 </a>
 
                 <a href="/devices" 
-                   class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('devices*') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
-                    <i class="fas fa-cctv w-5"></i>
+                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('devices*') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
+                    <i class="fa-solid fa-microchip"></i>
                     <span class="font-semibold">My Devices</span>
                     <span class="ml-auto text-xs bg-blue-400 px-2 py-1 rounded-full">{{ auth()->user()->devices()->count() }}</span>
                 </a>
 
                 <a href="/alerts" 
-                   class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('alerts*') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
+                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('alerts*') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
                     <i class="fas fa-bell w-5"></i>
                     <span class="font-semibold">Alerts</span>
-                    @if(auth()->user()->unreadCriticalAlerts() > 0)
+                    @php
+                        $activeAlertsCount = auth()->user()->alerts()->where('status', 'active')->count();
+                    @endphp
+                    @if($activeAlertsCount > 0)
                         <span class="ml-auto bg-red-500 px-2 py-1 rounded-full text-xs font-bold animate-pulse">
-                            {{ auth()->user()->unreadCriticalAlerts() }}
+                            {{ $activeAlertsCount }}
                         </span>
+                    @else
+                        <span class="ml-auto bg-blue-400 px-2 py-1 rounded-full text-xs font-bold">0</span>
                     @endif
                 </a>
 
-                <hr class="border-blue-500 my-4">
-
+                <!-- Profile link with active state -->
                 <a href="/profile" 
-                   class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition hover:bg-blue-700">
+                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('profile') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
                     <i class="fas fa-user-circle w-5"></i>
                     <span class="font-semibold">Profile</span>
                 </a>
 
+                <!-- Settings link with active state -->
                 <a href="/settings" 
-                   class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition hover:bg-blue-700">
+                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('settings') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
                     <i class="fas fa-cog w-5"></i>
                     <span class="font-semibold">Settings</span>
                 </a>
             </nav>
+
 
             <!-- User Section -->
             <div class="p-4 border-t border-blue-500">
@@ -104,55 +109,51 @@
                     </div>
 
                     <div class="flex items-center space-x-4">
-                        <!-- Notifications Bell -->
-                        <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open" 
-                                    class="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-bell text-xl"></i>
-                                @if(auth()->user()->alerts()->where('status', 'active')->count() > 0)
-                                    <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse font-bold">
-                                        {{ auth()->user()->alerts()->where('status', 'active')->count() }}
-                                    </span>
-                                @endif
-                            </button>
+                    <!-- Notifications Bell - SIMPLE VERSION -->
+                    <div class="relative">
+                        <button id="notifBellBtn" class="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <i class="fas fa-bell text-xl"></i>
+                            
+                            @php
+                                $activeAlerts = auth()->user()->alerts()->where('status', 'active')->count();
+                            @endphp
+                            @if($activeAlerts > 0)
+                                <span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full animate-pulse">
+                                    {{ $activeAlerts }}
+                                </span>
+                            @endif
+                        </button>
 
-                            <!-- Notification Dropdown -->
-                            <div x-show="open" 
-                                @click.outside="open = false"
-                                class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto">
-                                
-                                <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 border-b border-blue-500">
-                                    <h3 class="font-bold text-lg">
-                                        <i class="fas fa-bell mr-2"></i>Notifications
-                                    </h3>
-                                    <p class="text-xs text-blue-200">{{ auth()->user()->alerts()->where('status', 'active')->count() }} active alerts</p>
-                                </div>
+                        <!-- Dropdown Panel -->
+                        <div id="notifPanel" class="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden hidden flex flex-col">
+                            
+                            <!-- Header -->
+                            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 border-b border-blue-500">
+                                <h3 class="font-bold text-lg">
+                                    <i class="fas fa-bell mr-2"></i>Alerts
+                                </h3>
+                                <p class="text-xs text-blue-200">{{ $activeAlerts }} active</p>
+                            </div>
 
-                                @if(auth()->user()->alerts()->where('status', 'active')->count() > 0)
-                                    <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                                        @foreach(auth()->user()->alerts()->where('status', 'active')->latest()->take(5)->get() as $alert)
-                                            <a href="/alerts/{{ $alert->id }}" 
-                                            class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-l-4 {{ 
-                                                $alert->severity === 'critical' ? 'border-red-500' : 
-                                                ($alert->severity === 'warning' ? 'border-yellow-500' : 'border-blue-500')
-                                            }}">
-                                                <div class="flex items-start gap-3">
-                                                    <span class="text-xl">{{ $alert->getSeverityEmoji() }}</span>
-                                                    <div class="flex-1 min-w-0">
-                                                        <p class="font-semibold text-gray-900 dark:text-white text-sm">{{ $alert->device->name }}</p>
-                                                        <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ $alert->message }}</p>
-                                                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">{{ $alert->created_at->diffForHumans() }}</p>
-                                                    </div>
+                            <!-- Alerts List -->
+                            <div class="overflow-y-auto flex-1">
+                                @if($activeAlerts > 0)
+                                    @foreach(auth()->user()->alerts()->where('status', 'active')->latest()->take(8)->get() as $alert)
+                                        <a href="{{ route('alerts.show', $alert) }}" 
+                                        class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-l-4 {{ 
+                                            $alert->severity === 'critical' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 
+                                            ($alert->severity === 'warning' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20')
+                                        }}">
+                                            <div class="flex items-start gap-3">
+                                                <span class="text-xl flex-shrink-0">{{ $alert->getSeverityEmoji() }}</span>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="font-semibold text-gray-900 dark:text-white text-sm">{{ $alert->device->name }}</p>
+                                                    <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ $alert->message }}</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">{{ $alert->created_at->diffForHumans() }}</p>
                                                 </div>
-                                            </a>
-                                        @endforeach
-                                    </div>
-
-                                    <div class="border-t border-gray-200 dark:border-gray-700 p-3">
-                                        <a href="/alerts" class="block text-center text-sm font-semibold text-blue-600 hover:text-blue-700">
-                                            View All Alerts <i class="fas fa-arrow-right ml-1"></i>
+                                            </div>
                                         </a>
-                                    </div>
+                                    @endforeach
                                 @else
                                     <div class="p-8 text-center text-gray-500 dark:text-gray-400">
                                         <i class="fas fa-check-circle text-3xl text-green-500 mb-2 block"></i>
@@ -160,7 +161,19 @@
                                     </div>
                                 @endif
                             </div>
+
+                            <!-- Footer -->
+                            @if($activeAlerts > 0)
+                                <div class="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-700/50">
+                                    <a href="{{ route('alerts.index') }}" 
+                                    class="block text-center text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 py-2">
+                                        View All Alerts <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </div>
+                            @endif
                         </div>
+                    </div>
+
 
 
             </header>
@@ -214,6 +227,32 @@
                 }, 5000);
             });
         }, 100);
+
+        // Simple notification bell toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const notifBellBtn = document.getElementById('notifBellBtn');
+    const notifPanel = document.getElementById('notifPanel');
+
+    // Toggle panel when clicking bell
+    notifBellBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        notifPanel.classList.toggle('hidden');
+    });
+
+    // Close panel when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!notifPanel.contains(e.target) && !notifBellBtn.contains(e.target)) {
+            notifPanel.classList.add('hidden');
+        }
+    });
+
+    // Close when clicking a link inside the panel
+    notifPanel.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', function() {
+            notifPanel.classList.add('hidden');
+        });
+    });
+});
     </script>
 
     @yield('scripts')

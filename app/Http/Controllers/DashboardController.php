@@ -14,28 +14,39 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         
+        // Get all active devices of the user
         $devices = $user->devices()->where('is_active', true)->get();
         
-        // Get latest readings
+        // Get latest readings for each device
         $latestReadings = [];
         foreach ($devices as $device) {
             $latestReadings[$device->id] = $device->latestReading();
         }
 
-        // Statistics
+        // Device statistics
         $totalDevices = $devices->count();
         $onlineDevices = $devices->where('status', 'online')->count();
-        $criticalAlerts = $user->alerts()->where('severity', 'critical')->where('status', 'active')->count();
-        
-        // Recent alerts
-        $recentAlerts = $user->alerts()->latest()->take(10)->get();
+
+        // Alert statistics
+        $stats = [
+            'total' => $user->alerts()->count(),
+            'active' => $user->alerts()->where('status', 'active')->count(),
+            'critical' => $user->alerts()->where('severity', 'critical')->where('status', 'active')->count(),
+            'resolved' => $user->alerts()->where('status', 'resolved')->count(),
+        ];
+
+        // Recent alerts - show only the latest 10
+        $recentAlerts = $user->alerts()
+            ->latest()
+            ->take(10)
+            ->get();
 
         return view('dashboard.index', [
             'devices' => $devices,
             'latestReadings' => $latestReadings,
             'totalDevices' => $totalDevices,
             'onlineDevices' => $onlineDevices,
-            'criticalAlerts' => $criticalAlerts,
+            'stats' => $stats,           // pass stats for dashboard cards
             'recentAlerts' => $recentAlerts,
         ]);
     }
@@ -50,9 +61,9 @@ class DashboardController extends Controller
 
         $readings24h = $device->readingsLast24Hours();
         $alerts = $device->alerts()->latest()->take(20)->get();
-        $threshold = $device->safetyThreshold; // FIX: Explicitly get threshold
+        $threshold = $device->safetyThreshold; // Device safety threshold
         $latestReading = $device->latestReading();
-        $latestImage = $device->latestCameraImage(); // Get latest image
+        $latestImage = $device->latestCameraImage(); // Latest captured image
 
         return view('dashboard.device', [
             'device' => $device,
@@ -60,7 +71,7 @@ class DashboardController extends Controller
             'alerts' => $alerts,
             'threshold' => $threshold,
             'latestReading' => $latestReading,
-            'latestImage' => $latestImage, // Pass image to view
+            'latestImage' => $latestImage,
         ]);
     }
 }

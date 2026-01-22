@@ -62,5 +62,6 @@ Route::middleware('auth')->group(function () {
 
 // API routes for ESP32
 Route::post('/api/sensor-data', [App\Http\Controllers\ApiController::class, 'storeSensorData']);
+Route::post('/api/motion-detection', [App\Http\Controllers\ApiController::class, 'storeMotionDetection']);
 Route::post('/api/upload-image', [App\Http\Controllers\ApiController::class, 'uploadImage']);
 Route::get('/api/device/{device}/latest-reading', [App\Http\Controllers\ApiController::class, 'getLatestReading'])->middleware('auth');

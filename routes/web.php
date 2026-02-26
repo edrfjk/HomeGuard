@@ -65,3 +65,10 @@ Route::post('/api/sensor-data', [App\Http\Controllers\ApiController::class, 'sto
 Route::post('/api/motion-detection', [App\Http\Controllers\ApiController::class, 'storeMotionDetection']);
 Route::post('/api/upload-image', [App\Http\Controllers\ApiController::class, 'uploadImage']);
 Route::get('/api/device/{device}/latest-reading', [App\Http\Controllers\ApiController::class, 'getLatestReading'])->middleware('auth');
+
+// routes/api.php
+
+Route::post('/motion-detection', [ApiController::class, 'storeMotionDetection']);
+Route::post('/sensor-data', [ApiController::class, 'storeSensorData']);
+
+// routes/web.php

@@ -3,103 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - HomeGuard</title>
+    <title>Login — HomeGuard</title>
     @vite(['resources/css/app.css'])
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --accent: #22d3ee; --accent-dim: #0e7490;
+            --bg: #080d14; --panel: #0f1823; --card: #131f2e;
+            --border: rgba(34,211,238,0.12); --text: #e2e8f0; --muted: #64748b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 20px; position: relative; overflow: hidden;
+        }
+        /* Grid background */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(34,211,238,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(34,211,238,.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+        }
+        /* Glowing orb */
+        body::after {
+            content: '';
+            position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(34,211,238,.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .login-card {
+            width: 100%; max-width: 400px;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 18px; padding: 36px 32px;
+            position: relative; z-index: 10;
+            animation: slideUp 0.5s cubic-bezier(.4,0,.2,1) forwards;
+        }
+        @keyframes slideUp { from{opacity:0;transform:translateY(24px);} to{opacity:1;transform:none;} }
+
+        .logo { text-align: center; margin-bottom: 32px; }
+        .logo-icon {
+            width: 56px; height: 56px; margin: 0 auto 14px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+            border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: #000;
+            box-shadow: 0 0 40px rgba(34,211,238,.25);
+        }
+        .logo h1 { font-size: 24px; font-weight: 700; color: #fff; }
+        .logo p  { font-size: 11px; color: var(--accent); font-family: 'Space Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block; font-size: 11px; font-weight: 600; color: var(--muted);
+            margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.08em;
+            font-family: 'Space Mono', monospace;
+        }
+        .input-wrap { position: relative; }
+        .input-icon {
+            position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+            color: var(--muted); font-size: 13px; pointer-events: none;
+        }
+        .form-input {
+            width: 100%; padding: 11px 14px 11px 38px;
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            border-radius: 9px; color: var(--text); font-size: 14px;
+            font-family: 'DM Sans', sans-serif; transition: border-color .2s, background .2s;
+        }
+        .form-input:focus { outline: none; border-color: var(--accent); background: rgba(34,211,238,.04); }
+        .form-input::placeholder { color: rgba(100,116,139,.5); }
+
+        .remember-row {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 20px; font-size: 13px; color: var(--muted);
+        }
+        .remember-row input { accent-color: var(--accent); }
+
+        .btn-login {
+            width: 100%; padding: 12px;
+            background: var(--accent); color: #000;
+            border: none; border-radius: 9px;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+            transition: all .2s; letter-spacing: 0.03em;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-login:hover { background: #67e8f9; box-shadow: 0 0 20px rgba(34,211,238,.3); }
+
+        .divider { text-align: center; margin: 20px 0; color: var(--muted); font-size: 12px; position: relative; }
+        .divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
+        .divider span { background: var(--card); padding: 0 12px; position: relative; }
+
+        .register-link {
+            text-align: center; font-size: 13px; color: var(--muted);
+        }
+        .register-link a { color: var(--accent); font-weight: 600; text-decoration: none; }
+        .register-link a:hover { text-decoration: underline; }
+
+        .error-box {
+            margin-bottom: 16px; padding: 12px 14px;
+            background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.2);
+            border-radius: 8px; font-size: 13px; color: #f87171;
+        }
+
+        .hint-box {
+            margin-top: 16px; padding: 12px 14px;
+            background: rgba(34,211,238,.05); border: 1px solid rgba(34,211,238,.1);
+            border-radius: 8px; font-size: 11px; color: var(--muted);
+            font-family: 'Space Mono', monospace; line-height: 1.7;
+        }
+        .hint-box .hint-title { color: var(--accent); font-weight: 700; margin-bottom: 6px; font-size: 10px; letter-spacing: 0.1em; }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-md animate-slideUp">
-        <!-- Card -->
-        <div class="bg-white rounded-2xl shadow-2xl p-8">
-            <!-- Logo -->
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <i class="fas fa-home text-white text-2xl"></i>
+<body>
+    <div class="login-card">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-shield-halved"></i></div>
+            <h1>HomeGuard</h1>
+            <p>IoT Safety System</p>
+        </div>
+
+        @if($errors->any())
+            <div class="error-box">
+                @foreach($errors->all() as $e)
+                    <div><i class="fas fa-exclamation-circle" style="margin-right:6px;"></i>{{ $e }}</div>
+                @endforeach
+            </div>
+        @endif
+
+        <form method="POST" action="/login">
+            @csrf
+
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <div class="input-wrap">
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" name="email" class="form-input" value="{{ old('email') }}" placeholder="you@example.com" required autofocus>
                 </div>
-                <h1 class="text-3xl font-bold text-gray-900">HomeGuard</h1>
-                <p class="text-gray-600 text-sm mt-2">Smart Home Safety System</p>
             </div>
 
-            <!-- Errors -->
-            @if($errors->any())
-                <div class="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                    @foreach($errors->all() as $error)
-                        <p><i class="fas fa-exclamation-circle mr-2"></i>{{ $error }}</p>
-                    @endforeach
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-wrap">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" name="password" class="form-input" placeholder="••••••••" required>
                 </div>
-            @endif
-
-            <!-- Form -->
-            <form method="POST" action="/login" class="space-y-5">
-                @csrf
-
-                <div>
-                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-envelope mr-2 text-blue-600"></i>Email Address
-                    </label>
-                    <input type="email" 
-                           id="email" 
-                           name="email" 
-                           value="{{ old('email') }}"
-                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition"
-                           placeholder="you@example.com"
-                           required>
-                </div>
-
-                <div>
-                    <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-2 text-blue-600"></i>Password
-                    </label>
-                    <input type="password" 
-                           id="password" 
-                           name="password" 
-                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition"
-                           placeholder="••••••••"
-                           required>
-                </div>
-
-                <div class="flex items-center">
-                    <input type="checkbox" id="remember" name="remember" class="w-4 h-4 text-blue-600 rounded">
-                    <label for="remember" class="ml-2 text-sm text-gray-700">Remember me</label>
-                </div>
-
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 transition shadow-lg transform hover:scale-105">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Login to HomeGuard
-                </button>
-            </form>
-
-            <!-- Register Link -->
-            <div class="mt-6 text-center border-t pt-6">
-                <p class="text-gray-600 text-sm">
-                    Don't have an account?
-                    <a href="/register" class="text-blue-600 font-bold hover:underline">Register here</a>
-                </p>
             </div>
 
-            <!-- Test Credentials -->
-            <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-xs text-gray-700">
-                <p class="font-semibold text-blue-900 mb-2"><i class="fas fa-info-circle mr-1"></i>Test Credentials:</p>
-                <p>📧 Email: <code class="bg-white px-2 py-1 rounded">test@example.com</code></p>
-                <p>🔑 Password: <code class="bg-white px-2 py-1 rounded">password</code></p>
+            <div class="remember-row">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Remember me</label>
             </div>
+
+            <button type="submit" class="btn-login">
+                <i class="fas fa-right-to-bracket" style="margin-right:8px;"></i>Sign In
+            </button>
+        </form>
+
+        <div class="divider"><span>or</span></div>
+
+        <div class="register-link">
+            Don't have an account? <a href="/register">Create one</a>
+        </div>
+
+        <div class="hint-box">
+            <div class="hint-title">— DEV CREDENTIALS —</div>
+            Email: test@example.com<br>
+            Password: 12345678
         </div>
     </div>
-
-    <style>
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .animate-slideUp {
-            animation: slideUp 0.5s ease-out;
-        }
-    </style>
 </body>
 </html>

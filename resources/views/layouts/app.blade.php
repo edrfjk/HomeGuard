@@ -1,260 +1,472 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'HomeGuard')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --sidebar-w: 260px;
+            --accent: #22d3ee;
+            --accent-dim: #0e7490;
+            --danger: #f87171;
+            --warn: #fbbf24;
+            --safe: #34d399;
+            --bg-deep: #080d14;
+            --bg-panel: #0f1823;
+            --bg-card: #131f2e;
+            --border: rgba(34,211,238,0.12);
+            --text-main: #e2e8f0;
+            --text-muted: #64748b;
+            --text-dim: #334155;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+        }
+        .mono { font-family: 'Space Mono', monospace; }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w); height: 100vh;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            z-index: 50;
+            transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+        }
+        .sidebar-logo {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .logo-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: #000; flex-shrink: 0;
+        }
+        .logo-text { line-height: 1.2; }
+        .logo-text h1 { font-size: 17px; font-weight: 700; color: #fff; margin: 0; letter-spacing: 0.02em; }
+        .logo-text p { font-size: 10px; color: var(--accent); margin: 0; letter-spacing: 0.12em; text-transform: uppercase; font-family: 'Space Mono', monospace; }
+
+        /* Nav */
+        .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+        .nav-section { font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 8px 6px; font-family: 'Space Mono', monospace; }
+        .nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; border-radius: 8px;
+            color: var(--text-muted); font-size: 14px; font-weight: 500;
+            text-decoration: none; transition: all 0.15s; margin-bottom: 2px;
+            position: relative;
+        }
+        .nav-link:hover { background: rgba(34,211,238,0.06); color: var(--text-main); }
+        .nav-link.active {
+            background: rgba(34,211,238,0.10);
+            color: var(--accent);
+        }
+        .nav-link.active::before {
+            content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+            width: 3px; background: var(--accent); border-radius: 0 3px 3px 0;
+        }
+        .nav-link i { width: 18px; text-align: center; font-size: 13px; }
+        .nav-badge {
+            margin-left: auto; font-size: 11px; font-weight: 700;
+            padding: 2px 7px; border-radius: 99px;
+            font-family: 'Space Mono', monospace;
+        }
+        .badge-danger { background: rgba(248,113,113,0.15); color: var(--danger); }
+        .badge-muted  { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+
+        /* Status dot */
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--safe); margin-left: auto; flex-shrink: 0;
+            box-shadow: 0 0 6px var(--safe);
+            animation: pulse-safe 2s infinite;
+        }
+        @keyframes pulse-safe { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+        /* User section */
+        .sidebar-user {
+            padding: 14px 16px;
+            border-top: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .user-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-dim), #1e3a5f);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; color: var(--accent); flex-shrink: 0;
+        }
+        .user-info { flex: 1; min-width: 0; }
+        .user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-email { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .logout-btn {
+            width: 30px; height: 30px; border-radius: 8px;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+        }
+        .logout-btn:hover { background: rgba(248,113,113,0.1); color: var(--danger); border-color: var(--danger); }
+
+        /* ── Main Content ── */
+        .main-wrap { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* Top bar */
+        .topbar {
+            position: sticky; top: 0; z-index: 40;
+            background: rgba(8,13,20,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 28px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .topbar-title h1 { font-size: 20px; font-weight: 700; color: #fff; margin: 0; }
+        .topbar-title p { font-size: 12px; color: var(--text-muted); margin: 2px 0 0; }
+        .topbar-actions { display: flex; align-items: center; gap: 10px; }
+        .topbar-btn {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            text-decoration: none; position: relative;
+        }
+        .topbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .topbar-notif-badge {
+            position: absolute; top: -4px; right: -4px;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--danger); color: #fff;
+            font-size: 9px; font-weight: 700; font-family: 'Space Mono', monospace;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid var(--bg-deep);
+        }
+
+        /* Page content */
+        .page-content { flex: 1; padding: 28px; }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+        .card-p { padding: 24px; }
+
+        /* ── Stat Cards ── */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 22px;
+            position: relative; overflow: hidden;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .stat-card:hover { border-color: rgba(34,211,238,0.3); transform: translateY(-2px); }
+        .stat-card::after {
+            content: ''; position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+        }
+        .stat-card.blue::after  { background: linear-gradient(90deg, var(--accent), transparent); }
+        .stat-card.green::after { background: linear-gradient(90deg, var(--safe), transparent); }
+        .stat-card.orange::after{ background: linear-gradient(90deg, var(--warn), transparent); }
+        .stat-card.red::after   { background: linear-gradient(90deg, var(--danger), transparent); }
+
+        .stat-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'Space Mono', monospace; }
+        .stat-value { font-size: 36px; font-weight: 700; font-family: 'Space Mono', monospace; line-height: 1.1; margin: 8px 0 4px; }
+        .stat-value.blue   { color: var(--accent); }
+        .stat-value.green  { color: var(--safe); }
+        .stat-value.orange { color: var(--warn); }
+        .stat-value.red    { color: var(--danger); }
+        .stat-icon {
+            position: absolute; top: 22px; right: 22px;
+            width: 42px; height: 42px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+        }
+        .stat-icon.blue   { background: rgba(34,211,238,0.1);  color: var(--accent); }
+        .stat-icon.green  { background: rgba(52,211,153,0.1);  color: var(--safe); }
+        .stat-icon.orange { background: rgba(251,191,36,0.1);  color: var(--warn); }
+        .stat-icon.red    { background: rgba(248,113,113,0.1); color: var(--danger); }
+        .stat-sub { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+
+        /* ── Status pill ── */
+        .status-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
+            font-family: 'Space Mono', monospace;
+        }
+        .status-pill.online  { background: rgba(52,211,153,0.12); color: var(--safe); }
+        .status-pill.offline { background: rgba(100,116,139,0.12); color: var(--text-muted); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .status-dot.online  { background: var(--safe); animation: pulse-safe 2s infinite; }
+        .status-dot.offline { background: var(--text-dim); }
+
+        /* ── Alert pills ── */
+        .alert-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700;
+            font-family: 'Space Mono', monospace;
+        }
+        .alert-pill.critical { background: rgba(248,113,113,0.15); color: var(--danger); }
+        .alert-pill.warning  { background: rgba(251,191,36,0.12);  color: var(--warn); }
+        .alert-pill.info     { background: rgba(34,211,238,0.1);   color: var(--accent); }
+
+        /* ── Sensor value boxes ── */
+        .sensor-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 10px; text-align: center;
+        }
+        .sensor-box .s-label { font-size: 10px; color: var(--text-muted); font-family: 'Space Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em; }
+        .sensor-box .s-val   { font-size: 20px; font-weight: 700; font-family: 'Space Mono', monospace; margin-top: 4px; }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            text-decoration: none; cursor: pointer; border: none; transition: all 0.15s;
+        }
+        .btn-primary {
+            background: var(--accent); color: #000;
+        }
+        .btn-primary:hover { background: #67e8f9; }
+        .btn-ghost {
+            background: transparent; color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger { background: rgba(248,113,113,0.12); color: var(--danger); border: 1px solid rgba(248,113,113,0.2); }
+        .btn-danger:hover { background: rgba(248,113,113,0.22); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* ── Alert list items ── */
+        .alert-item {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 12px 14px; border-radius: 10px; margin-bottom: 6px;
+            border-left: 3px solid transparent; transition: background 0.15s;
+            text-decoration: none; color: inherit;
+        }
+        .alert-item:hover { background: rgba(255,255,255,0.03); }
+        .alert-item.critical { border-left-color: var(--danger); background: rgba(248,113,113,0.04); }
+        .alert-item.warning  { border-left-color: var(--warn);   background: rgba(251,191,36,0.04); }
+        .alert-item.info     { border-left-color: var(--accent);  background: rgba(34,211,238,0.04); }
+
+        /* ── Form controls ── */
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'Space Mono', monospace; }
+        .form-control {
+            width: 100%; padding: 10px 14px;
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text-main); font-size: 14px;
+            transition: border-color 0.15s; font-family: 'DM Sans', sans-serif;
+        }
+        .form-control:focus { outline: none; border-color: var(--accent); background: rgba(34,211,238,0.04); }
+        .form-control::placeholder { color: var(--text-dim); }
+
+        /* ── Mobile ── */
+        .mobile-menu-btn {
+            display: none; background: var(--bg-card); border: 1px solid var(--border);
+            color: var(--text-main); padding: 8px 12px; border-radius: 8px;
+            cursor: pointer; font-size: 16px;
+        }
+        @media (max-width: 1023px) {
+            #sidebar { transform: translateX(-100%); }
+            #sidebar.open { transform: translateX(0); }
+            .main-wrap { margin-left: 0; }
+            .mobile-menu-btn { display: flex; align-items: center; }
+            .page-content { padding: 16px; }
+            .topbar { padding: 12px 16px; }
+        }
+
+        /* ── Overlay ── */
+        #sidebarOverlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            z-index: 45; backdrop-filter: blur(2px);
+        }
+        #sidebarOverlay.show { display: block; }
+
+        /* ── Transitions ── */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:none;} }
+        .fade-up { animation: fadeUp 0.4s ease-out forwards; opacity: 0; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 99px; }
+
+        /* ── Flash messages ── */
+        .flash {
+            padding: 12px 18px; border-radius: 8px; font-size: 13px; font-weight: 500;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+        }
+        .flash.success { background: rgba(52,211,153,0.1); color: var(--safe); border: 1px solid rgba(52,211,153,0.2); }
+        .flash.error   { background: rgba(248,113,113,0.1); color: var(--danger); border: 1px solid rgba(248,113,113,0.2); }
+
+        /* ── Table ── */
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'Space Mono', monospace; padding: 8px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+        td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+    </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900">
-    <div class="min-h-screen flex">
-        <!-- Sidebar -->
-        <aside class="hidden lg:flex w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white flex-col shadow-2xl fixed h-screen">
-            <!-- Logo -->
-            <div class="p-6 border-b border-blue-500">
-                <div class="flex items-center justify-center space-x-3">
-                    <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center animate-pulse-glow">
-                        <i class="fas fa-home text-blue-600 text-2xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold">HomeGuard</h1>
-                        <p class="text-xs text-blue-200">IoT Safety System</p>
-                    </div>
-                </div>
-            </div>
+<body>
+<div id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-            <!-- Navigation Menu -->
-            <nav class="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
-                <a href="/dashboard" 
-                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('dashboard') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
-                    <i class="fas fa-chart-line w-5"></i>
-                    <span class="font-semibold">Dashboard</span>
-                </a>
-
-                <a href="/devices" 
-                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('devices*') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
-                    <i class="fa-solid fa-microchip"></i>
-                    <span class="font-semibold">My Devices</span>
-                    <span class="ml-auto text-xs bg-blue-400 px-2 py-1 rounded-full">{{ auth()->user()->devices()->count() }}</span>
-                </a>
-
-                <a href="/alerts" 
-                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('alerts*') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
-                    <i class="fas fa-bell w-5"></i>
-                    <span class="font-semibold">Alerts</span>
-                    @php
-                        $activeAlertsCount = auth()->user()->alerts()->where('status', 'active')->count();
-                    @endphp
-                    @if($activeAlertsCount > 0)
-                        <span class="ml-auto bg-red-500 px-2 py-1 rounded-full text-xs font-bold animate-pulse">
-                            {{ $activeAlertsCount }}
-                        </span>
-                    @else
-                        <span class="ml-auto bg-blue-400 px-2 py-1 rounded-full text-xs font-bold">0</span>
-                    @endif
-                </a>
-
-                <!-- Profile link with active state -->
-                <a href="/profile" 
-                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('profile') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
-                    <i class="fas fa-user-circle w-5"></i>
-                    <span class="font-semibold">Profile</span>
-                </a>
-
-                <!-- Settings link with active state -->
-                <a href="/settings" 
-                class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->is('settings') ? 'bg-blue-500 shadow-lg' : 'hover:bg-blue-700' }}">
-                    <i class="fas fa-cog w-5"></i>
-                    <span class="font-semibold">Settings</span>
-                </a>
-            </nav>
-
-
-            <!-- User Section -->
-            <div class="p-4 border-t border-blue-500">
-                <div class="flex items-center space-x-3 mb-4">
-                    <div class="w-10 h-10 bg-blue-300 rounded-full flex items-center justify-center font-bold text-blue-700">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                    </div>
-                    <div class="text-sm flex-1">
-                        <p class="font-semibold truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-blue-200 text-xs truncate">{{ auth()->user()->email }}</p>
-                    </div>
-                </div>
-
-                <form method="POST" action="/logout">
-                    @csrf
-                    <button type="submit" class="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-semibold">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Logout</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <div class="flex-1 lg:ml-64 flex flex-col">
-            <!-- Top Bar -->
-            <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm">
-                <div class="px-6 py-4 flex items-center justify-between">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                            @yield('page-title', 'Dashboard')
-                        </h1>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            @yield('page-subtitle', '')
-                        </p>
-                    </div>
-
-                    <div class="flex items-center space-x-4">
-                    <!-- Notifications Bell - SIMPLE VERSION -->
-                    <div class="relative">
-                        <button id="notifBellBtn" class="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <i class="fas fa-bell text-xl"></i>
-                            
-                            @php
-                                $activeAlerts = auth()->user()->alerts()->where('status', 'active')->count();
-                            @endphp
-                            @if($activeAlerts > 0)
-                                <span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full animate-pulse">
-                                    {{ $activeAlerts }}
-                                </span>
-                            @endif
-                        </button>
-
-                        <!-- Dropdown Panel -->
-                        <div id="notifPanel" class="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden hidden flex flex-col">
-                            
-                            <!-- Header -->
-                            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 border-b border-blue-500">
-                                <h3 class="font-bold text-lg">
-                                    <i class="fas fa-bell mr-2"></i>Alerts
-                                </h3>
-                                <p class="text-xs text-blue-200">{{ $activeAlerts }} active</p>
-                            </div>
-
-                            <!-- Alerts List -->
-                            <div class="overflow-y-auto flex-1">
-                                @if($activeAlerts > 0)
-                                    @foreach(auth()->user()->alerts()->where('status', 'active')->latest()->take(8)->get() as $alert)
-                                        <a href="{{ route('alerts.show', $alert) }}" 
-                                        class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-l-4 {{ 
-                                            $alert->severity === 'critical' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 
-                                            ($alert->severity === 'warning' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20')
-                                        }}">
-                                            <div class="flex items-start gap-3">
-                                                <span class="text-xl flex-shrink-0">{{ $alert->getSeverityEmoji() }}</span>
-                                                <div class="flex-1 min-w-0">
-                                                    <p class="font-semibold text-gray-900 dark:text-white text-sm">{{ $alert->device->name }}</p>
-                                                    <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ $alert->message }}</p>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">{{ $alert->created_at->diffForHumans() }}</p>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    @endforeach
-                                @else
-                                    <div class="p-8 text-center text-gray-500 dark:text-gray-400">
-                                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2 block"></i>
-                                        <p class="text-sm">No active alerts</p>
-                                    </div>
-                                @endif
-                            </div>
-
-                            <!-- Footer -->
-                            @if($activeAlerts > 0)
-                                <div class="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-700/50">
-                                    <a href="{{ route('alerts.index') }}" 
-                                    class="block text-center text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 py-2">
-                                        View All Alerts <i class="fas fa-arrow-right ml-1"></i>
-                                    </a>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-
-
-            </header>
-
-            <!-- Page Content -->
-            <main class="flex-1 overflow-y-auto">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <!-- Flash Messages -->
-                    @if($message = Session::get('success'))
-                        <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center space-x-3 animate-fadeIn"
-                             x-data="{ show: true }"
-                             x-show="show"
-                             @click="show = false"
-                             style="cursor: pointer;">
-                            <i class="fas fa-check-circle text-xl"></i>
-                            <span>{{ $message }}</span>
-                        </div>
-                    @endif
-
-                    @if($errors->any())
-                        <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg animate-fadeIn">
-                            <div class="flex items-center space-x-3 mb-2">
-                                <i class="fas fa-exclamation-circle text-xl"></i>
-                                <span class="font-semibold">Errors occurred:</span>
-                            </div>
-                            <ul class="list-disc list-inside space-y-1 ml-8">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    <!-- Content Slot -->
-                    @yield('content')
-                </div>
-            </main>
+<!-- ── Sidebar ── -->
+<aside id="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon"><i class="fas fa-shield-halved"></i></div>
+        <div class="logo-text">
+            <h1>HomeGuard</h1>
+            <p>IoT Safety System</p>
         </div>
     </div>
 
-    <!-- Alpine.js for interactivity -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <nav class="sidebar-nav">
+        <div class="nav-section">Monitor</div>
 
-    <!-- Auto-hide alerts -->
-    <script>
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('[x-show]');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    alert.remove();
-                }, 5000);
-            });
-        }, 100);
+        <a href="/dashboard" class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}">
+            <i class="fas fa-gauge-high"></i>
+            <span>Dashboard</span>
+        </a>
 
-        // Simple notification bell toggle
-document.addEventListener('DOMContentLoaded', function() {
-    const notifBellBtn = document.getElementById('notifBellBtn');
-    const notifPanel = document.getElementById('notifPanel');
+        <a href="/devices" class="nav-link {{ request()->is('devices*') || request()->is('device/*') ? 'active' : '' }}">
+            <i class="fas fa-microchip"></i>
+            <span>Devices</span>
+            @php $devCount = auth()->user()->devices()->where('is_active', true)->count(); @endphp
+            <span class="nav-badge badge-muted">{{ $devCount }}</span>
+        </a>
 
-    // Toggle panel when clicking bell
-    notifBellBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        notifPanel.classList.toggle('hidden');
+        @php $activeAlerts = auth()->user()->alerts()->where('status', 'active')->count(); @endphp
+        <a href="/alerts" class="nav-link {{ request()->is('alerts*') ? 'active' : '' }}">
+            <i class="fas fa-bell"></i>
+            <span>Alerts</span>
+            @if($activeAlerts > 0)
+                <span class="nav-badge badge-danger">{{ $activeAlerts }}</span>
+            @else
+                <span class="nav-badge badge-muted">0</span>
+            @endif
+        </a>
+
+        <div class="nav-section" style="margin-top:8px;">Account</div>
+
+        <a href="/profile" class="nav-link {{ request()->is('profile') ? 'active' : '' }}">
+            <i class="fas fa-user-circle"></i>
+            <span>Profile</span>
+        </a>
+
+        <a href="/settings" class="nav-link {{ request()->is('settings*') ? 'active' : '' }}">
+            <i class="fas fa-sliders"></i>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+    <div class="sidebar-user">
+        <div class="user-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
+        <div class="user-info">
+            <div class="user-name">{{ auth()->user()->name }}</div>
+            <div class="user-email">{{ auth()->user()->email }}</div>
+        </div>
+        <form method="POST" action="/logout">
+            @csrf
+            <button type="submit" class="logout-btn" title="Logout">
+                <i class="fas fa-right-from-bracket"></i>
+            </button>
+        </form>
+    </div>
+</aside>
+
+<!-- ── Main ── -->
+<div class="main-wrap">
+    <!-- Top bar -->
+    <header class="topbar">
+        <div class="flex items-center gap-3">
+            <button class="mobile-menu-btn" onclick="openSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="topbar-title">
+                <h1>@yield('page-title', 'Dashboard')</h1>
+                <p>@yield('page-subtitle', '')</p>
+            </div>
+        </div>
+
+        <div class="topbar-actions">
+            <!-- Alerts bell -->
+            <a href="/alerts" class="topbar-btn" title="Alerts">
+                <i class="fas fa-bell"></i>
+                @if($activeAlerts > 0)
+                    <span class="topbar-notif-badge">{{ min($activeAlerts, 9) }}</span>
+                @endif
+            </a>
+            <!-- Time -->
+            <div class="mono" style="font-size:12px;color:var(--text-muted);padding:0 4px;" id="clock"></div>
+        </div>
+    </header>
+
+    <!-- Flash messages -->
+    <div style="padding: 0 28px; padding-top: 20px;">
+        @if(session('success'))
+            <div class="flash success"><i class="fas fa-check-circle"></i> {{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="flash error"><i class="fas fa-exclamation-circle"></i> {{ session('error') }}</div>
+        @endif
+        @if($errors->any())
+            <div class="flash error">
+                <i class="fas fa-triangle-exclamation"></i>
+                <div>@foreach($errors->all() as $e)<div>{{ $e }}</div>@endforeach</div>
+            </div>
+        @endif
+    </div>
+
+    <!-- Page Content -->
+    <main class="page-content">
+        @yield('content')
+    </main>
+</div>
+
+<script>
+// Clock
+function updateClock() {
+    const el = document.getElementById('clock');
+    if (el) el.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Mobile sidebar
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('show');
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+// Auto-dismiss flash
+setTimeout(() => {
+    document.querySelectorAll('.flash').forEach(el => {
+        el.style.transition = 'opacity 0.5s'; el.style.opacity = '0';
+        setTimeout(() => el.remove(), 500);
     });
+}, 4000);
+</script>
 
-    // Close panel when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!notifPanel.contains(e.target) && !notifBellBtn.contains(e.target)) {
-            notifPanel.classList.add('hidden');
-        }
-    });
-
-    // Close when clicking a link inside the panel
-    notifPanel.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', function() {
-            notifPanel.classList.add('hidden');
-        });
-    });
-});
-    </script>
-
-    @yield('scripts')
+@yield('scripts')
 </body>
 </html>

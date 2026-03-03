@@ -1,398 +1,414 @@
 @extends('layouts.app')
 
-@section('title', $device->name . ' - HomeGuard')
+@section('title', $device->name . ' — HomeGuard')
 @section('page-title', $device->name)
-@section('page-subtitle', $device->location)
+@section('page-subtitle', $device->location . ' · ' . ($device->status === 'online' ? 'Live' : 'Offline'))
 
 @section('content')
-@php $latest = $device->latestReading(); @endphp
-<div class="space-y-6">
-    <!-- Back Button -->
-    <div>
-        <a href="/devices" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Devices
-        </a>
-    </div>
+@php $latest = $latestReading; @endphp
 
-    <!-- Device Info Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Status Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Status</p>
-                    <div class="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-bold {{ 
-                        $device->status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
-                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                    }}">
-                        <span class="w-2 h-2 rounded-full {{ $device->status === 'online' ? 'bg-green-600 animate-pulse' : 'bg-gray-400' }}"></span>
-                        <span>{{ ucfirst($device->status) }}</span>
-                    </div>
-                </div>
-                <div class="{{ $device->status === 'online' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700' }} p-3 rounded-full">
-                    <i class="fas fa-signal text-2xl {{ $device->status === 'online' ? 'text-green-600 dark:text-green-400' : 'text-gray-400' }}"></i>
-                </div>
+<div style="display:flex;flex-direction:column;gap:20px;">
+
+    {{-- Back --}}
+    <a href="/devices" class="btn btn-ghost btn-sm" style="align-self:flex-start;">
+        <i class="fas fa-arrow-left"></i> Back to Devices
+    </a>
+
+    {{-- ── Live Sensor Cards ── --}}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;" id="liveCards">
+
+        {{-- Status --}}
+        <div class="stat-card {{ $device->status === 'online' ? 'green' : 'blue' }} fade-up">
+            <div class="stat-icon {{ $device->status === 'online' ? 'green' : 'blue' }}">
+                <i class="fas fa-signal"></i>
+            </div>
+            <div class="stat-label">Status</div>
+            <div style="margin:10px 0 4px;">
+                <span class="status-pill {{ $device->status }}">
+                    <span class="status-dot {{ $device->status }}"></span>
+                    {{ ucfirst($device->status) }}
+                </span>
+            </div>
+            <div class="stat-sub mono" style="font-size:10px;">
+                @if($device->last_seen)
+                    Seen {{ $device->last_seen->diffForHumans() }}
+                @else
+                    Never connected
+                @endif
             </div>
         </div>
 
-        <!-- Temperature Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Temperature</p>
-                    <p class="text-3xl font-bold text-gray-900 dark:text-white">
-                        {{ $latest ? number_format($latest->temperature, 1) : '--' }}<span class="text-lg">°C</span>
-                    </p>
+        {{-- Temperature --}}
+        <div class="stat-card orange fade-up" style="animation-delay:.06s">
+            <div class="stat-icon orange"><i class="fas fa-thermometer-half"></i></div>
+            <div class="stat-label">Temperature</div>
+            <div class="stat-value orange" id="liveTemp">{{ $latest ? number_format($latest->temperature, 1) : '--' }}<span style="font-size:18px;">°C</span></div>
+            @if($threshold && $latest)
+                <div class="stat-sub">
+                    @if($latest->temperature >= $threshold->temp_critical)
+                        <span style="color:var(--danger);">⚠ Critical (>{{ $threshold->temp_critical }}°)</span>
+                    @elseif($latest->temperature >= $threshold->temp_warning)
+                        <span style="color:var(--warn);">! Warning (>{{ $threshold->temp_warning }}°)</span>
+                    @else
+                        <i class="fas fa-check"></i> Normal range
+                    @endif
                 </div>
-                <div class="bg-orange-100 dark:bg-orange-900 p-3 rounded-full">
-                    <i class="fas fa-thermometer-half text-2xl text-orange-600 dark:text-orange-400"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Humidity Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Humidity</p>
-                    <p class="text-3xl font-bold text-gray-900 dark:text-white">
-                        {{ $latest ? number_format($latest->humidity, 1) : '--' }}<span class="text-lg">%</span>
-                    </p>
-                </div>
-                <div class="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
-                    <i class="fas fa-tint text-2xl text-blue-600 dark:text-blue-400"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Gas Level Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Gas Level</p>
-                    <p class="text-3xl font-bold text-gray-900 dark:text-white">
-                        {{ $latest ? round($latest->gas_level) : '--' }}
-                    </p>
-                </div>
-                <div class="bg-red-100 dark:bg-red-900 p-3 rounded-full">
-                    <i class="fas fa-burn text-2xl text-red-600 dark:text-red-400"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Section with Time Range Selector -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
-                <i class="fas fa-chart-line mr-2"></i>Sensor Data History
-            </h3>
-            
-            <!-- Time Range Selector -->
-            <div class="flex gap-2 flex-wrap">
-                <button onclick="updateChartRange(24, event)" class="chart-range-btn active px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all">
-                    24 Hours
-                </button>
-                <button onclick="updateChartRange(168, event)" class="chart-range-btn px-4 py-2 rounded-lg text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                    7 Days
-                </button>
-                <button onclick="updateChartRange(720, event)" class="chart-range-btn px-4 py-2 rounded-lg text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                    30 Days
-                </button>
-            </div>
-        </div>
-
-        <!-- Loading Indicator -->
-        <div id="chartLoading" class="hidden text-center py-8">
-            <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-2"></i>
-            <p class="text-gray-600 dark:text-gray-400">Loading chart data...</p>
-        </div>
-
-        <!-- Charts Grid -->
-        <div id="chartsContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Temperature Chart -->
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                    <i class="fas fa-thermometer-half text-orange-500 mr-2"></i>
-                    Temperature (°C)
-                </h4>
-                <div style="height: 250px;">
-                    <canvas id="temperatureChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Humidity Chart -->
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                    <i class="fas fa-tint text-blue-500 mr-2"></i>
-                    Humidity (%)
-                </h4>
-                <div style="height: 250px;">
-                    <canvas id="humidityChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Gas Level Chart -->
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                    <i class="fas fa-burn text-red-500 mr-2"></i>
-                    Gas Level
-                </h4>
-                <div style="height: 250px;">
-                    <canvas id="gasChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Motion Detection Gallery -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-            <div>
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                    <i class="fas fa-camera mr-2"></i>Motion Detection Gallery
-                </h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ $device->cameraImages()->count() }} total captures
-                </p>
-            </div>
-            @if($device->cameraImages()->count() > 0)
-                <a href="{{ route('camera.gallery', $device->id) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm">
-                    <i class="fas fa-images mr-2"></i>View Full Gallery
-                </a>
             @endif
         </div>
 
-        @if($device->cameraImages()->count() > 0)
-            @php $latestImage = $device->latestCameraImage(); @endphp
-            
-            <!-- Latest Capture Preview -->
-            <div class="mb-6">
-                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Latest Capture</h4>
-                <div class="relative bg-gray-900 rounded-xl overflow-hidden aspect-video shadow-xl group cursor-pointer"
-                     onclick="openImageModal('{{ $latestImage->getImageUrl() }}', '{{ $latestImage->created_at->format('M d, Y - h:i A') }}', {{ $latestImage->id }}, {!! json_encode($latestImage->caption ?? '') !!}, {{ $latestImage->is_favorite ? 'true' : 'false' }})">
-                    <img src="{{ $latestImage->getImageUrl() }}" 
-                         alt="Latest Capture"
-                         class="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105">
-                    
-                    <!-- Overlay -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    
-                    <!-- View Icon -->
-                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div class="bg-white/20 backdrop-blur-sm rounded-full p-4">
-                            <i class="fas fa-search-plus text-white text-3xl"></i>
-                        </div>
-                    </div>
-                    
-                    <!-- Trigger Type Badge -->
-                    @php
-                        $badgeClasses = match($latestImage->trigger_type) {
-                            'alert' => 'bg-red-600',
-                            'manual' => 'bg-blue-600',
-                            default => 'bg-orange-600'
-                        };
-                        $badgeIcon = match($latestImage->trigger_type) {
-                            'alert' => 'fa-exclamation-triangle',
-                            'manual' => 'fa-hand-pointer',
-                            default => 'fa-running'
-                        };
-                    @endphp
-                    <div class="absolute top-4 left-4 {{ $badgeClasses }} text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg {{ $latestImage->trigger_type === 'alert' ? 'animate-pulse' : '' }}">
-                        <i class="fas {{ $badgeIcon }} mr-2"></i>{{ strtoupper($latestImage->trigger_type) }}
-                    </div>
-
-                    <!-- Favorite Star -->
-                    <button onclick="event.stopPropagation(); toggleFavorite({{ $latestImage->id }}, event)" 
-                            class="absolute top-4 right-4 favorite-btn z-10 transform hover:scale-110 transition-transform"
-                            id="favorite-{{ $latestImage->id }}"
-                            data-favorite="{{ $latestImage->is_favorite ? 'true' : 'false' }}">
-                        <i class="fas fa-star text-3xl {{ $latestImage->is_favorite ? 'text-yellow-400' : 'text-white/60' }} drop-shadow-lg"></i>
-                    </button>
-
-                    <!-- Info Bar -->
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
-                        <div class="flex items-center justify-between text-white">
-                            <div class="flex items-center space-x-4">
-                                <span class="text-sm font-semibold">
-                                    <i class="fas fa-clock mr-2"></i>{{ $latestImage->created_at->diffForHumans() }}
-                                </span>
-                                @if($latestImage->caption)
-                                    <span class="text-sm">
-                                        <i class="fas fa-comment mr-2"></i>{{ $latestImage->caption }}
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+        {{-- Humidity --}}
+        <div class="stat-card blue fade-up" style="animation-delay:.12s">
+            <div class="stat-icon blue"><i class="fas fa-droplet"></i></div>
+            <div class="stat-label">Humidity</div>
+            <div class="stat-value blue" id="liveHumid">{{ $latest ? number_format($latest->humidity, 1) : '--' }}<span style="font-size:18px;">%</span></div>
+            @if($threshold && $latest)
+                <div class="stat-sub">
+                    @if($latest->humidity >= $threshold->humidity_critical)
+                        <span style="color:var(--danger);">⚠ Critical</span>
+                    @elseif($latest->humidity >= $threshold->humidity_warning)
+                        <span style="color:var(--warn);">! Warning</span>
+                    @else
+                        <i class="fas fa-check"></i> Normal range
+                    @endif
                 </div>
-            </div>
+            @endif
+        </div>
 
-            <!-- Filter and Thumbnail Gallery -->
-            <div class="space-y-4">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Recent Captures
-                    </h4>
-                    
-                    <!-- Filter Buttons -->
-                    <div class="flex gap-2 flex-wrap items-center">
-                        <button onclick="filterImages('all', event)" class="filter-btn active px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all">
-                            <i class="fas fa-th mr-1"></i>All
-                        </button>
-                        <button onclick="filterImages('alert', event)" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                            <i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>Alerts
-                        </button>
-                        <button onclick="filterImages('motion', event)" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                            <i class="fas fa-running text-orange-500 mr-1"></i>Motion
-                        </button>
-                        <button onclick="filterImages('favorites', event)" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                            <i class="fas fa-star text-yellow-500 mr-1"></i>Favorites
-                        </button>
-
-                        <!-- Date Filter -->
-                        <input type="date" id="dateFilter" onchange="filterByDate()" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200">
-                    </div>
-
+        {{-- Gas Level --}}
+        <div class="stat-card red fade-up" style="animation-delay:.18s">
+            <div class="stat-icon red"><i class="fas fa-fire-flame-curved"></i></div>
+            <div class="stat-label">Gas Level</div>
+            <div class="stat-value red" id="liveGas">{{ $latest ? round($latest->gas_level) : '--' }}<span style="font-size:14px;"> ppm</span></div>
+            @if($threshold && $latest)
+                <div class="stat-sub">
+                    @if($latest->gas_level >= $threshold->gas_critical)
+                        <span style="color:var(--danger);">⚠ Critical</span>
+                    @elseif($latest->gas_level >= $threshold->gas_warning)
+                        <span style="color:var(--warn);">! Warning</span>
+                    @else
+                        <i class="fas fa-check"></i> Normal range
+                    @endif
                 </div>
-
-                <!-- No Results Message -->
-                <div id="noResults" class="hidden text-center py-8">
-                    <i class="fas fa-filter text-gray-400 dark:text-gray-600 text-4xl mb-3"></i>
-                    <p class="text-gray-600 dark:text-gray-400">No images match the selected filter</p>
-                </div>
-
-                <!-- Image Grid -->
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="imageGrid">
-                    @foreach($device->cameraImages()->latest()->take(24)->get() as $image)
-                        <div class="group relative aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:ring-4 hover:ring-blue-500 transition-all duration-300 shadow-md hover:shadow-xl image-item"
-                             data-trigger="{{ $image->trigger_type }}"
-                             data-favorite="{{ $image->is_favorite ? 'true' : 'false' }}"
-                             onclick="openImageModal('{{ $image->getImageUrl() }}', '{{ $image->created_at->format('M d, Y - h:i A') }}', {{ $image->id }}, {!! json_encode($image->caption ?? '') !!}, {{ $image->is_favorite ? 'true' : 'false' }})">
-                            
-                            <img src="{{ $image->getImageUrl() }}" 
-                                 alt="{{ $image->caption ?? 'Capture' }}"
-                                 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                 loading="lazy">
-                            
-                            <!-- Overlay on hover -->
-                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-                                <i class="fas fa-search-plus text-white text-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
-                            </div>
-                            
-                            <!-- Trigger Type Badge -->
-                            @php
-                                $badgeClasses = match($image->trigger_type) {
-                                    'alert' => 'bg-red-600',
-                                    'manual' => 'bg-blue-600',
-                                    default => 'bg-orange-600'
-                                };
-                            @endphp
-                            <div class="absolute top-1.5 left-1.5 {{ $badgeClasses }} text-white px-2 py-0.5 rounded text-xs font-bold shadow-lg">
-                                {{ strtoupper(substr($image->trigger_type, 0, 1)) }}
-                            </div>
-
-                            <!-- Favorite Star -->
-                            @if($image->is_favorite)
-                                <div class="absolute top-1.5 right-1.5">
-                                    <i class="fas fa-star text-yellow-400 text-sm drop-shadow-lg"></i>
-                                </div>
-                            @endif
-                            
-                            <!-- Timestamp -->
-                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                <p class="text-white text-xs">{{ $image->created_at->diffForHumans() }}</p>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @else
-            <p class="text-gray-600 dark:text-gray-400 text-center py-8">No images captured yet.</p>
-        @endif
+            @endif
+        </div>
     </div>
+
+    {{-- ── Charts Section ── --}}
+    <div class="card card-p fade-up" style="animation-delay:.24s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h3 style="font-size:15px;font-weight:700;color:#fff;margin:0;">
+                    <i class="fas fa-chart-line" style="color:var(--accent);margin-right:8px;"></i>Sensor History
+                </h3>
+                <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0;font-family:'Space Mono',monospace;" id="chartSubtitle">Loading...</p>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button onclick="loadChart(24, this)"   class="range-btn active btn btn-sm">24 H</button>
+                <button onclick="loadChart(168, this)"  class="range-btn btn btn-ghost btn-sm">7 D</button>
+                <button onclick="loadChart(720, this)"  class="range-btn btn btn-ghost btn-sm">30 D</button>
+                <button onclick="loadChart(1, this)"  class="range-btn btn btn-ghost btn-sm" style="display:none" id="refreshBtn">
+                    <i class="fas fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="chartLoading" style="text-align:center;padding:40px;display:none;">
+            <i class="fas fa-spinner fa-spin" style="font-size:28px;color:var(--accent);"></i>
+            <p style="color:var(--text-muted);margin-top:12px;font-size:13px;">Loading data...</p>
+        </div>
+
+        <div id="chartError" style="text-align:center;padding:30px;display:none;">
+            <i class="fas fa-triangle-exclamation" style="font-size:28px;color:var(--warn);"></i>
+            <p style="color:var(--text-muted);margin-top:10px;font-size:13px;">Failed to load chart data</p>
+        </div>
+
+        <div id="chartEmpty" style="text-align:center;padding:40px;display:none;">
+            <i class="fas fa-satellite-dish" style="font-size:32px;color:var(--text-dim);"></i>
+            <p style="color:var(--text-muted);margin-top:12px;font-size:13px;">No readings yet in this time range</p>
+        </div>
+
+        <div id="chartsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+            <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:16px;">
+                <div style="font-size:11px;color:var(--warn);font-family:'Space Mono',monospace;margin-bottom:12px;">
+                    <i class="fas fa-thermometer-half" style="margin-right:6px;"></i>TEMPERATURE (°C)
+                </div>
+                <div style="height:200px;"><canvas id="tempChart"></canvas></div>
+            </div>
+            <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:16px;">
+                <div style="font-size:11px;color:var(--accent);font-family:'Space Mono',monospace;margin-bottom:12px;">
+                    <i class="fas fa-droplet" style="margin-right:6px;"></i>HUMIDITY (%)
+                </div>
+                <div style="height:200px;"><canvas id="humidChart"></canvas></div>
+            </div>
+            <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:16px;">
+                <div style="font-size:11px;color:var(--danger);font-family:'Space Mono',monospace;margin-bottom:12px;">
+                    <i class="fas fa-fire-flame-curved" style="margin-right:6px;"></i>GAS LEVEL (ppm)
+                </div>
+                <div style="height:200px;"><canvas id="gasChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ── Latest Camera Image ── --}}
+    @if($latestImage)
+    <div class="card card-p fade-up" style="animation-delay:.3s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <div>
+                <h3 style="font-size:15px;font-weight:700;color:#fff;margin:0;">
+                    <i class="fas fa-camera" style="color:var(--accent);margin-right:8px;"></i>Camera Captures
+                </h3>
+                <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0;font-family:'Space Mono',monospace;">
+                    {{ $device->cameraImages()->count() }} total captures
+                </p>
+            </div>
+            <a href="{{ route('camera.gallery', $device->id) }}" class="btn btn-ghost btn-sm">
+                <i class="fas fa-images"></i> Gallery
+            </a>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
+            @foreach($device->cameraImages()->latest()->take(6)->get() as $img)
+                <div style="position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid var(--border);"
+                     onclick="openModal('{{ $img->getImageUrl() }}', '{{ $img->created_at->format('M d, Y - h:i A') }}')">
+                    <img src="{{ $img->getImageUrl() }}" style="width:100%;height:100%;object-fit:cover;transition:transform .3s;"
+                         onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform=''" loading="lazy">
+                    @php $bc = match($img->trigger_type){ 'alert'=>'var(--danger)', 'manual'=>'var(--accent)', default=>'var(--warn)' }; @endphp
+                    <div style="position:absolute;top:6px;left:6px;background:{{ $bc }};color:{{ $img->trigger_type==='manual'?'#000':'#fff' }};padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;">
+                        {{ strtoupper($img->trigger_type) }}
+                    </div>
+                    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:8px 8px 6px;font-size:10px;color:#fff;font-family:'Space Mono',monospace;">
+                        {{ $img->created_at->diffForHumans() }}
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    {{-- ── Recent Alerts ── --}}
+    <div class="card card-p fade-up" style="animation-delay:.36s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <h3 style="font-size:15px;font-weight:700;color:#fff;margin:0;">
+                <i class="fas fa-bell" style="color:var(--warn);margin-right:8px;"></i>Recent Alerts
+            </h3>
+            <a href="/alerts?device={{ $device->id }}" class="btn btn-ghost btn-sm">View all</a>
+        </div>
+
+        @forelse($alerts as $alert)
+            <a href="{{ route('alerts.show', $alert) }}" class="alert-item {{ $alert->severity }}">
+                <span style="font-size:16px;">{{ $alert->severity === 'critical' ? '🚨' : ($alert->severity === 'warning' ? '⚠️' : 'ℹ️') }}</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                        <span style="font-size:13px;font-weight:600;color:#fff;">{{ str_replace('_', ' ', ucfirst($alert->type)) }}</span>
+                        <span class="alert-pill {{ $alert->severity }}">{{ strtoupper($alert->severity) }}</span>
+                        @if($alert->status === 'resolved')
+                            <span class="alert-pill info">RESOLVED</span>
+                        @endif
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $alert->message }}</div>
+                    <div style="font-size:10px;color:var(--text-dim);margin-top:3px;font-family:'Space Mono',monospace;">{{ $alert->created_at->diffForHumans() }}</div>
+                </div>
+            </a>
+        @empty
+            <div style="text-align:center;padding:24px;color:var(--text-muted);">
+                <i class="fas fa-shield-halved" style="font-size:28px;display:block;color:var(--safe);margin-bottom:8px;"></i>
+                <p style="font-size:13px;margin:0;">No alerts for this device</p>
+            </div>
+        @endforelse
+    </div>
+
+    {{-- ── Safety Thresholds ── --}}
+    @if($threshold)
+    <div class="card card-p fade-up" style="animation-delay:.42s">
+        <h3 style="font-size:15px;font-weight:700;color:#fff;margin:0 0 18px;">
+            <i class="fas fa-sliders" style="color:var(--accent);margin-right:8px;"></i>Safety Thresholds
+        </h3>
+        <form method="POST" action="{{ route('devices.updateThresholds', $device) }}">
+            @csrf @method('PUT')
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;">
+                {{-- Temperature --}}
+                <div>
+                    <div style="font-size:11px;color:var(--warn);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-thermometer-half" style="margin-right:6px;"></i>TEMPERATURE (°C)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Warning</label>
+                            <input type="number" name="temp_warning" value="{{ $threshold->temp_warning }}" step="0.5" class="form-control">
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Critical</label>
+                            <input type="number" name="temp_critical" value="{{ $threshold->temp_critical }}" step="0.5" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                {{-- Humidity --}}
+                <div>
+                    <div style="font-size:11px;color:var(--accent);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-droplet" style="margin-right:6px;"></i>HUMIDITY (%)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Warning</label>
+                            <input type="number" name="humidity_warning" value="{{ $threshold->humidity_warning }}" step="1" class="form-control">
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Critical</label>
+                            <input type="number" name="humidity_critical" value="{{ $threshold->humidity_critical }}" step="1" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                {{-- Gas --}}
+                <div>
+                    <div style="font-size:11px;color:var(--danger);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-fire-flame-curved" style="margin-right:6px;"></i>GAS LEVEL (ppm)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Warning</label>
+                            <input type="number" name="gas_warning" value="{{ $threshold->gas_warning }}" step="10" class="form-control">
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Critical</label>
+                            <input type="number" name="gas_critical" value="{{ $threshold->gas_critical }}" step="10" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Thresholds
+                </button>
+            </div>
+        </form>
+    </div>
+    @endif
+
+</div>
+
+{{-- Image Modal --}}
+<div id="imgModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.9);align-items:center;justify-content:center;padding:20px;" onclick="closeModal()">
+    <img id="imgModalSrc" style="max-width:90vw;max-height:85vh;border-radius:10px;object-fit:contain;">
+    <div id="imgModalTime" style="position:absolute;bottom:30px;left:50%;transform:translateX(-50%);color:#fff;font-size:12px;font-family:'Space Mono',monospace;background:rgba(0,0,0,.6);padding:6px 14px;border-radius:99px;"></div>
+    <button onclick="closeModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,.1);border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
 </div>
 
 @endsection
 
 @section('scripts')
 <script>
-let currentRange = 24;
+const DEVICE_ID = {{ $device->id }};
+const CHART_URL = '/device/' + DEVICE_ID + '/chart-data';
 
-// Chart update function
-function updateChartRange(hours, event) {
-    currentRange = hours;
-    document.querySelectorAll('.chart-range-btn').forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-600', 'text-white');
-        btn.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+
+let tempChart, humidChart, gasChart;
+
+function makeChart(id, label, color, data, labels) {
+    const ctx = document.getElementById(id).getContext('2d');
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label,
+                data,
+                borderColor: color,
+                backgroundColor: color.replace(')', ', 0.07)').replace('rgb', 'rgba'),
+                borderWidth: 2,
+                pointRadius: data.length > 100 ? 0 : 3,
+                pointHoverRadius: 5,
+                fill: true,
+                tension: 0.4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 400 },
+            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: '#0f1823', titleColor: '#e2e8f0', bodyColor: '#94a3b8', borderColor: 'rgba(34,211,238,.2)', borderWidth: 1 } },
+            scales: {
+                x: { ticks: { maxTicksLimit: 6, font: { family: 'Space Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                y: { ticks: { font: { family: 'Space Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+            }
+        }
     });
-    if(event) {
-        event.target.classList.add('active', 'bg-blue-600', 'text-white');
-        event.target.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
-    }
-    loadChartData(hours); // Assume function exists to load chart
 }
 
-// Filter gallery
-function filterImages(filter, event) {
-    const items = document.querySelectorAll('.image-item');
-    let visibleCount = 0;
+function destroyCharts() {
+    [tempChart, humidChart, gasChart].forEach(c => { if(c) c.destroy(); });
+}
 
-    items.forEach(item => {
-        let show = false;
-        switch(filter) {
-            case 'all': show = true; break;
-            case 'alert': show = item.dataset.trigger === 'alert'; break;
-            case 'motion': show = item.dataset.trigger === 'motion'; break;
-            case 'favorites': show = item.dataset.favorite === 'true'; break;
-        }
-        item.style.display = show ? 'block' : 'none';
-        if(show) visibleCount++;
+async function loadChart(hours, btn) {
+    // Update button styles
+    document.querySelectorAll('.range-btn').forEach(b => {
+        b.className = 'range-btn btn btn-ghost btn-sm';
     });
+    if (btn) { btn.className = 'range-btn active btn btn-sm'; }
 
-    document.getElementById('noResults').classList.toggle('hidden', visibleCount > 0);
+    document.getElementById('chartLoading').style.display = 'block';
+    document.getElementById('chartsGrid').style.display = 'none';
+    document.getElementById('chartError').style.display = 'none';
+    document.getElementById('chartEmpty').style.display = 'none';
 
-    // Button active state
-    if(event) {
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active', 'bg-blue-600', 'text-white');
-            btn.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+    try {
+        const res = await fetch(`${CHART_URL}?hours=${hours}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         });
-        event.target.classList.add('active', 'bg-blue-600', 'text-white');
-        event.target.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+
+        document.getElementById('chartLoading').style.display = 'none';
+
+        if (!json.readings || json.readings.length === 0) {
+            document.getElementById('chartEmpty').style.display = 'block';
+            document.getElementById('chartSubtitle').textContent = '0 readings';
+            return;
+        }
+
+        const labels = json.readings.map(r => r.time);
+        const temps  = json.readings.map(r => r.temperature);
+        const humids = json.readings.map(r => r.humidity);
+        const gases  = json.readings.map(r => r.gas_level);
+
+        destroyCharts();
+        document.getElementById('chartsGrid').style.display = 'grid';
+
+        tempChart  = makeChart('tempChart',  'Temperature (°C)', 'rgb(251,191,36)', temps, labels);
+        humidChart = makeChart('humidChart', 'Humidity (%)',     'rgb(34,211,238)',  humids, labels);
+        gasChart   = makeChart('gasChart',   'Gas (ppm)',        'rgb(248,113,113)', gases, labels);
+
+        const hLabel = hours <= 24 ? `Last ${hours}h` : hours <= 168 ? 'Last 7 days' : 'Last 30 days';
+        document.getElementById('chartSubtitle').textContent = `${json.count} readings · ${hLabel}`;
+    } catch(e) {
+        document.getElementById('chartLoading').style.display = 'none';
+        document.getElementById('chartError').style.display = 'block';
+        console.error('Chart load error:', e);
     }
 }
 
-// Date filter
-function filterByDate() {
-    const selectedDate = document.getElementById('dateFilter').value;
-    const items = document.querySelectorAll('.image-item');
-    let visibleCount = 0;
+// Image modal
+function openModal(url, time) {
+    const m = document.getElementById('imgModal');
+    document.getElementById('imgModalSrc').src = url;
+    document.getElementById('imgModalTime').textContent = time;
+    m.style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('imgModal').style.display = 'none';
+}
 
-    items.forEach(item => {
-        const timestampText = item.querySelector('div.absolute.bottom-0 p')?.textContent || '';
-        const itemDate = new Date(timestampText);
-        const itemDateStr = itemDate.toISOString().split('T')[0];
-        if(!selectedDate || itemDateStr === selectedDate) {
-            item.style.display = 'block';
-            visibleCount++;
-        } else {
-            item.style.display = 'none';
+// Auto-refresh live values every 30s
+async function refreshLive() {
+    try {
+        const res = await fetch(`/api/device/{{ $device->device_id }}/latest-reading`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.reading) {
+            const r = data.reading;
+            document.getElementById('liveTemp').innerHTML  = parseFloat(r.temperature).toFixed(1) + '<span style="font-size:18px;">°C</span>';
+            document.getElementById('liveHumid').innerHTML = parseFloat(r.humidity).toFixed(1)    + '<span style="font-size:18px;">%</span>';
+            document.getElementById('liveGas').innerHTML   = Math.round(r.gas_level)              + '<span style="font-size:14px;"> ppm</span>';
         }
-    });
-
-    document.getElementById('noResults').classList.toggle('hidden', visibleCount > 0);
+    } catch(e) { /* silent */ }
 }
 
-// Toggle favorite
-function toggleFavorite(id, event) {
-    event.stopPropagation();
-    const btn = document.getElementById('favorite-' + id);
-    const isFav = btn.dataset.favorite === 'true';
-    btn.dataset.favorite = !isFav;
-    btn.querySelector('i').classList.toggle('text-yellow-400', !isFav);
-    btn.querySelector('i').classList.toggle('text-white/60', isFav);
-    // TODO: AJAX call to save favorite in backend
-}
+// Init
+loadChart(24, document.querySelector('.range-btn.active'));
+setInterval(refreshLive, 30000);
 </script>
 @endsection

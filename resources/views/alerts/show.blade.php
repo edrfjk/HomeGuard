@@ -1,270 +1,234 @@
 @extends('layouts.app')
 
-@section('title', 'Alert Details - HomeGuard')
-@section('page-title', 'Alert Details')
-@section('page-subtitle', 'View complete alert information')
+@section('title', 'Alert Detail — HomeGuard')
+@section('page-title', 'Alert Detail')
+@section('page-subtitle', $alert->device->name . ' · ' . $alert->device->location)
 
 @section('content')
-<div class="space-y-6">
-    <!-- Alert Header with Status -->
-    <div class="bg-gradient-to-r {{ 
-        $alert->severity === 'critical' ? 'from-red-600 to-red-700' : 
-        ($alert->severity === 'warning' ? 'from-yellow-600 to-yellow-700' : 'from-blue-600 to-blue-700')
-    }} text-white rounded-xl shadow-lg p-8">
-        <div class="flex items-start justify-between">
-            <div class="flex items-start gap-4">
-                <div class="text-6xl">
-                    @if($alert->severity === 'critical')
-                        🚨
-                    @elseif($alert->severity === 'warning')
-                        ⚠️
-                    @else
-                        ℹ️
+@php
+    $sc  = $alert->severity==='critical' ? 'var(--danger)' : ($alert->severity==='warning' ? 'var(--warn)' : 'var(--accent)');
+    $bg  = $alert->severity==='critical' ? 'rgba(248,113,113,.05)' : ($alert->severity==='warning' ? 'rgba(251,191,36,.05)' : 'rgba(34,211,238,.05)');
+@endphp
+
+<div style="display:flex;flex-direction:column;gap:16px;max-width:860px;">
+
+    <a href="{{ route('alerts.index') }}" class="btn btn-ghost btn-sm" style="align-self:flex-start;">
+        <i class="fas fa-arrow-left"></i> All Alerts
+    </a>
+
+    {{-- Banner --}}
+    <div class="card fade-up" style="border-left:4px solid {{ $sc }};background:{{ $bg }};padding:20px 22px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:flex-start;gap:14px;">
+                <span style="font-size:38px;line-height:1;">{{ $alert->severity==='critical'?'🚨':($alert->severity==='warning'?'⚠️':'ℹ️') }}</span>
+                <div>
+                    <h2 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 7px;">{{ str_replace('_',' ',ucfirst($alert->type)) }}</h2>
+                    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+                        <span style="background:{{ $sc }};color:{{ $alert->severity==='warning'?'#000':'#fff' }};padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;">{{ strtoupper($alert->severity) }}</span>
+                        @if($alert->status==='resolved')
+                            <span style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--safe);padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;">✓ RESOLVED</span>
+                        @elseif($alert->status==='acknowledged')
+                            <span style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);color:#60a5fa;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;">ACKNOWLEDGED</span>
+                        @else
+                            <span style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);color:var(--warn);padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;">● ACTIVE</span>
+                        @endif
+                        <span style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;">{{ $alert->created_at->diffForHumans() }}</span>
+                    </div>
+                </div>
+            </div>
+            @if($alert->status==='active')
+            <div style="display:flex;gap:8px;flex-shrink:0;">
+                <form action="{{ route('alerts.acknowledge', $alert) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i> Acknowledge</button>
+                </form>
+                <form action="{{ route('alerts.resolve', $alert) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check"></i> Resolve</button>
+                </form>
+            </div>
+            @endif
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:16px;" id="detailGrid">
+
+        {{-- Left col --}}
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+            {{-- Message --}}
+            <div class="card card-p fade-up" style="animation-delay:.05s;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:10px;"><i class="fas fa-message" style="margin-right:5px;color:var(--accent);"></i>MESSAGE</div>
+                <p style="font-size:14px;color:#fff;line-height:1.65;margin:0;padding-left:12px;border-left:2px solid {{ $sc }};">{{ $alert->message }}</p>
+            </div>
+
+            {{-- Readings --}}
+            @if($alert->reading_value || $alert->threshold_value)
+            <div class="card card-p fade-up" style="animation-delay:.08s;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-chart-bar" style="margin-right:5px;color:var(--accent);"></i>TRIGGER VALUES</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    @if($alert->reading_value)
+                    <div class="sensor-box">
+                        <div class="s-label">Actual Value</div>
+                        <div class="s-val" style="color:{{ $sc }};font-size:22px;">{{ $alert->reading_value }}</div>
+                    </div>
+                    @endif
+                    @if($alert->threshold_value)
+                    <div class="sensor-box">
+                        <div class="s-label">Threshold</div>
+                        <div class="s-val" style="color:var(--text-muted);font-size:22px;">{{ $alert->threshold_value }}</div>
+                    </div>
                     @endif
                 </div>
-                <div class="flex-1">
-                    <h1 class="text-4xl font-bold">{{ ucfirst(str_replace('_', ' ', $alert->type)) }}</h1>
-                    <p class="text-white/80 mt-2">{{ $alert->device->name }} • {{ $alert->device->location }}</p>
-                </div>
             </div>
-            <div class="text-right">
-                <span class="inline-block px-4 py-2 rounded-full font-bold text-sm {{ 
-                    $alert->status === 'active' ? 'bg-white/20 border-2 border-white' : 'bg-green-500/30 border-2 border-green-200'
-                }}">
-                    {{ strtoupper($alert->status) }}
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase">Severity</p>
-            <p class="text-2xl font-bold {{ 
-                $alert->severity === 'critical' ? 'text-red-600' : 
-                ($alert->severity === 'warning' ? 'text-yellow-600' : 'text-blue-600')
-            }} mt-1">{{ ucfirst($alert->severity) }}</p>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase">Triggered</p>
-            <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">{{ $alert->created_at->format('M d, H:i') }}</p>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase">Age</p>
-            <p class="text-sm font-bold text-gray-900 dark:text-white mt-1">{{ $alert->created_at->diffForHumans() }}</p>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase">Device Status</p>
-            <p class="text-sm font-bold {{ $alert->device->status === 'online' ? 'text-green-600' : 'text-red-600' }} mt-1">
-                <i class="fas fa-circle text-xs mr-1"></i>{{ ucfirst($alert->device->status) }}
-            </p>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left Column - Alert Details -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Alert Message -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Alert Message</h2>
-                <div class="p-6 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 {{ 
-                    $alert->severity === 'critical' ? 'border-red-500' : 
-                    ($alert->severity === 'warning' ? 'border-yellow-500' : 'border-blue-500')
-                }}">
-                    <p class="text-lg text-gray-900 dark:text-white leading-relaxed">{{ $alert->message }}</p>
-                </div>
-            </div>
-
-            <!-- Motion Detection Image -->
-            @if($alert->type === 'motion_detected' && $alert->cameraImage)
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                        <i class="fas fa-images mr-2 text-blue-600"></i>Captured Image
-                    </h2>
-                    <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                        <img src="{{ asset('storage/' . $alert->cameraImage->image_path) }}" 
-                             alt="Motion detection image"
-                             class="w-full h-auto object-cover rounded-lg shadow-lg max-h-96">
-                        <div class="absolute top-4 right-4 px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-bold">
-                            <i class="fas fa-person-running mr-1"></i>Motion Capture
-                        </div>
-                    </div>
-                    <div class="mt-4 space-y-2">
-                        @if($alert->cameraImage->caption)
-                            <p class="text-sm text-gray-600 dark:text-gray-400">
-                                <i class="fas fa-comment mr-2 text-blue-600"></i>{{ $alert->cameraImage->caption }}
-                            </p>
-                        @endif
-                        <p class="text-xs text-gray-500 dark:text-gray-500">
-                            <i class="fas fa-clock mr-1"></i>Captured {{ $alert->cameraImage->created_at->diffForHumans() }}
-                        </p>
-                        <p class="text-xs text-gray-500 dark:text-gray-500">
-                            <i class="fas fa-image mr-1"></i>{{ number_format($alert->cameraImage->file_size / 1024, 2) }} KB
-                        </p>
-                    </div>
-                    <a href="{{ route('camera.view', $alert->cameraImage) }}" class="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold text-sm text-center block">
-                        <i class="fas fa-expand mr-1"></i>View Full Image
-                    </a>
-                </div>
             @endif
 
-            <!-- Alert Details Grid -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Details</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Status</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ ucfirst($alert->status) }}</p>
-                    </div>
-
-                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Severity</p>
-                        <p class="text-lg font-bold {{ 
-                            $alert->severity === 'critical' ? 'text-red-600' : 
-                            ($alert->severity === 'warning' ? 'text-yellow-600' : 'text-blue-600')
-                        }}">{{ ucfirst($alert->severity) }}</p>
-                    </div>
-
-                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Device</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $alert->device->name }}</p>
-                    </div>
-
-                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Location</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $alert->device->location }}</p>
-                    </div>
-
-                    @if($alert->reading_value)
-                        <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Reading Value</p>
-                            <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $alert->reading_value }}</p>
-                        </div>
-                    @endif
-
-                    @if($alert->threshold_value)
-                        <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Threshold Value</p>
-                            <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $alert->threshold_value }}</p>
-                        </div>
-                    @endif
-
-                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Triggered At</p>
-                        <p class="text-sm font-bold text-gray-900 dark:text-white">{{ $alert->created_at->format('M d, Y H:i:s') }}</p>
-                    </div>
-
-                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-2">Alert Type</p>
-                        <p class="text-sm font-bold text-gray-900 dark:text-white">{{ ucfirst(str_replace('_', ' ', $alert->type)) }}</p>
+            {{-- Camera capture --}}
+            @if($alert->cameraImage)
+            <div class="card card-p fade-up" style="animation-delay:.11s;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-camera" style="margin-right:5px;color:var(--accent);"></i>MOTION CAPTURE</div>
+                <div style="position:relative;aspect-ratio:16/9;border-radius:9px;overflow:hidden;background:#000;cursor:pointer;"
+                     onclick="document.getElementById('imgModal').style.display='flex'">
+                    <img src="{{ asset('storage/'.$alert->cameraImage->image_path) }}"
+                         style="width:100%;height:100%;object-fit:cover;transition:transform .35s;"
+                         onmouseenter="this.style.transform='scale(1.04)'" onmouseleave="this.style.transform=''">
+                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);transition:background .2s;pointer-events:none;" id="imgHover">
+                        <i class="fas fa-expand" style="font-size:24px;color:#fff;opacity:0;transition:opacity .2s;" id="imgHoverIcon"></i>
                     </div>
                 </div>
+                <a href="{{ route('camera.view', $alert->cameraImage) }}" class="btn btn-ghost btn-sm" style="margin-top:10px;display:inline-flex;">
+                    <i class="fas fa-external-link-alt"></i> Open in Gallery
+                </a>
             </div>
+            @endif
 
-            <!-- Actions -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Actions</h2>
-                
-                <div class="flex gap-3 flex-wrap">
-                    @if($alert->status === 'active')
-                        <form action="{{ route('alerts.resolve', $alert) }}" method="POST" class="flex-1 min-w-max">
-                            @csrf
-                            <button type="submit" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold text-sm">
-                                <i class="fas fa-check-circle mr-2"></i>Resolve Alert
-                            </button>
-                        </form>
-                    @else
-                        <div class="flex-1 min-w-max px-6 py-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg text-center font-bold text-sm border-2 border-green-200 dark:border-green-700">
-                            <i class="fas fa-check-circle mr-2"></i>Alert Resolved
-                        </div>
-                    @endif
-
-                    <a href="{{ route('alerts.index') }}" class="flex-1 min-w-max px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-bold text-center text-sm">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Alerts
-                    </a>
+            {{-- Details grid --}}
+            <div class="card card-p fade-up" style="animation-delay:.14s;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-circle-info" style="margin-right:5px;color:var(--accent);"></i>DETAILS</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    @foreach([
+                        ['Alert ID',    '#'.$alert->id],
+                        ['Type',        str_replace('_',' ',ucfirst($alert->type))],
+                        ['Device',      $alert->device->name],
+                        ['Location',    $alert->device->location],
+                        ['Triggered',   $alert->created_at->format('M d, Y H:i:s')],
+                        ['Status',      ucfirst($alert->status)],
+                    ] as $row)
+                    <div class="sensor-box" style="padding:9px 12px;">
+                        <div class="s-label">{{ $row[0] }}</div>
+                        <div style="font-size:12px;font-weight:600;color:#fff;margin-top:3px;font-family:'Space Mono',monospace;">{{ $row[1] }}</div>
+                    </div>
+                    @endforeach
                 </div>
             </div>
         </div>
 
-        <!-- Right Column - Timeline & Info -->
-        <div class="space-y-6">
-            <!-- Timeline -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Timeline</h2>
-                
-                <div class="space-y-4">
-                    <!-- Triggered -->
-                    <div class="flex gap-4">
-                        <div class="flex flex-col items-center">
-                            <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
-                            <div class="w-0.5 h-12 bg-gray-300 dark:bg-gray-600"></div>
+        {{-- Right sidebar --}}
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+            {{-- Timeline --}}
+            <div class="card card-p fade-up" style="animation-delay:.06s;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:14px;"><i class="fas fa-timeline" style="margin-right:5px;color:var(--accent);"></i>TIMELINE</div>
+                <div style="display:flex;flex-direction:column;gap:0;">
+                    <div style="display:flex;gap:10px;padding-bottom:14px;">
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <div style="width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
+                            <div style="width:1px;flex:1;background:var(--border);margin:3px 0;"></div>
                         </div>
-                        <div class="pb-2">
-                            <p class="font-bold text-gray-900 dark:text-white text-sm">Alert Triggered</p>
-                            <p class="text-xs text-gray-600 dark:text-gray-400">{{ $alert->created_at->format('M d, Y H:i:s') }}</p>
+                        <div>
+                            <div style="font-size:12px;font-weight:600;color:#fff;">Alert triggered</div>
+                            <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-top:2px;">{{ $alert->created_at->format('M d, Y H:i:s') }}</div>
                         </div>
                     </div>
-
-                    <!-- Status Change -->
-                    @if($alert->status === 'resolved')
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-3 h-3 bg-green-600 rounded-full"></div>
-                            </div>
-                            <div>
-                                <p class="font-bold text-gray-900 dark:text-white text-sm">Alert Resolved</p>
-                                <p class="text-xs text-gray-600 dark:text-gray-400">{{ $alert->resolved_at ? $alert->resolved_at->format('M d, Y H:i:s') : 'Marked as resolved' }}</p>
-                            </div>
+                    @if($alert->status==='resolved')
+                    <div style="display:flex;gap:10px;">
+                        <div style="width:9px;height:9px;border-radius:50%;background:var(--safe);flex-shrink:0;margin-top:2px;"></div>
+                        <div>
+                            <div style="font-size:12px;font-weight:600;color:var(--safe);">Resolved</div>
+                            <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-top:2px;">{{ $alert->resolved_at?->format('M d, Y H:i:s') ?? 'Manually resolved' }}</div>
                         </div>
+                    </div>
                     @else
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-3 h-3 bg-yellow-600 rounded-full opacity-50"></div>
-                            </div>
-                            <div>
-                                <p class="font-bold text-gray-900 dark:text-white text-sm opacity-50">Pending Resolution</p>
-                                <p class="text-xs text-gray-600 dark:text-gray-400">Awaiting action</p>
-                            </div>
-                        </div>
+                    <div style="display:flex;gap:10px;opacity:.4;">
+                        <div style="width:9px;height:9px;border-radius:50%;border:1px dashed var(--text-muted);flex-shrink:0;margin-top:2px;"></div>
+                        <div style="font-size:12px;color:var(--text-muted);">Pending resolution</div>
+                    </div>
                     @endif
                 </div>
             </div>
 
-            <!-- Device Card -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Device Info</h2>
-                
-                <div class="space-y-3">
-                    <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-1">Name</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $alert->device->name }}</p>
+            {{-- Device --}}
+            <div class="card card-p fade-up" style="animation-delay:.09s;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-microchip" style="margin-right:5px;color:var(--accent);"></i>DEVICE</div>
+                <div style="display:flex;flex-direction:column;gap:9px;">
+                    <div>
+                        <div style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;margin-bottom:2px;">NAME</div>
+                        <div style="font-size:13px;font-weight:700;color:#fff;">{{ $alert->device->name }}</div>
                     </div>
-
-                    <div class="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-700">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-1">Location</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $alert->device->location }}</p>
+                    <div>
+                        <div style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;margin-bottom:2px;">LOCATION</div>
+                        <div style="font-size:12px;color:var(--text-muted);">{{ $alert->device->location }}</div>
                     </div>
-
-                    <div class="p-4 bg-gradient-to-br {{ $alert->device->status === 'online' ? 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/30 border-green-200 dark:border-green-700' : 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/30 border-red-200 dark:border-red-700' }} rounded-lg border">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-1">Status</p>
-                        <p class="text-lg font-bold {{ $alert->device->status === 'online' ? 'text-green-600' : 'text-red-600' }}">
-                            <i class="fas fa-circle text-xs mr-2"></i>{{ ucfirst($alert->device->status) }}
-                        </p>
+                    <div>
+                        <div style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;margin-bottom:4px;">STATUS</div>
+                        <span class="status-pill {{ $alert->device->status }}">
+                            <span class="status-dot {{ $alert->device->status }}"></span>{{ ucfirst($alert->device->status) }}
+                        </span>
                     </div>
                 </div>
-
-                <a href="/device/{{ $alert->device->id }}" class="w-full mt-4 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold text-sm text-center block">
-                    <i class="fas fa-arrow-right mr-2"></i>View Device
+                <a href="/device/{{ $alert->device->id }}" class="btn btn-primary btn-sm" style="margin-top:14px;display:flex;justify-content:center;font-size:11px;">
+                    <i class="fas fa-gauge-high"></i> Monitor Device
                 </a>
             </div>
+
+            {{-- Nav prev/next alert --}}
+            @php
+                $prev = \App\Models\Alert::where('user_id', auth()->id())->where('id','<',$alert->id)->latest()->first();
+                $next = \App\Models\Alert::where('user_id', auth()->id())->where('id','>',$alert->id)->oldest()->first();
+            @endphp
+            @if($prev || $next)
+            <div class="card card-p fade-up" style="animation-delay:.12s;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:10px;"><i class="fas fa-arrows-left-right" style="margin-right:5px;"></i>NAVIGATE</div>
+                <div style="display:flex;gap:7px;">
+                    @if($prev)
+                    <a href="{{ route('alerts.show',$prev) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;font-size:11px;"><i class="fas fa-chevron-left"></i> Older</a>
+                    @endif
+                    @if($next)
+                    <a href="{{ route('alerts.show',$next) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;font-size:11px;">Newer <i class="fas fa-chevron-right"></i></a>
+                    @endif
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>
 
+{{-- Image modal --}}
+@if($alert->cameraImage)
+<div id="imgModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.95);align-items:center;justify-content:center;" onclick="this.style.display='none'">
+    <img src="{{ asset('storage/'.$alert->cameraImage->image_path) }}" style="max-width:92vw;max-height:88vh;border-radius:10px;object-fit:contain;">
+    <button onclick="document.getElementById('imgModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.1);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
+</div>
+@endif
+@endsection
+
+@section('scripts')
+<script>
+// Hover effect on camera preview
+const imgHover = document.getElementById('imgHover');
+const imgIcon  = document.getElementById('imgHoverIcon');
+if (imgHover) {
+    imgHover.parentElement.addEventListener('mouseenter', () => { imgHover.style.background='rgba(0,0,0,.4)'; imgIcon.style.opacity='1'; });
+    imgHover.parentElement.addEventListener('mouseleave', () => { imgHover.style.background='rgba(0,0,0,0)'; imgIcon.style.opacity='0'; });
+}
+document.addEventListener('keydown', e => {
+    if (e.key==='Escape') { const m=document.getElementById('imgModal'); if(m) m.style.display='none'; }
+});
+// Responsive
+function adj() {
+    const g=document.getElementById('detailGrid');
+    if(g) g.style.gridTemplateColumns=window.innerWidth<768?'1fr':'1fr 280px';
+}
+adj(); window.addEventListener('resize',adj);
+</script>
 @endsection

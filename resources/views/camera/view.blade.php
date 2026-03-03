@@ -1,129 +1,259 @@
 @extends('layouts.app')
 
-@section('title', 'Camera Image - HomeGuard')
-@section('page-title', 'Camera Image Viewer')
-@section('page-subtitle', 'Full-screen camera capture')
+@section('title', 'Motion Capture — HomeGuard')
+@section('page-title', 'Capture Detail')
+@section('page-subtitle', $image->device->name . ' · ' . $image->created_at->format('M d, Y'))
 
 @section('content')
-<div class="space-y-8">
-    <!-- Image Container -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
-        <div class="bg-black flex items-center justify-center min-h-[600px]">
-            <img src="{{ $image->getImageUrl() }}" 
-                 alt="Camera capture" 
-                 class="max-w-full max-h-[600px] object-contain">
-        </div>
+@php
+    $linkedAlert = $image->alert;
+    $severity    = $linkedAlert?->severity ?? 'warning';
+    $sevColor    = $severity === 'critical' ? 'var(--danger)' : 'var(--warn)';
+@endphp
 
-        <!-- Image Information -->
-        <div class="p-8 space-y-6">
-            <!-- Header -->
-            <div class="flex items-start justify-between">
-                <div>
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">{{ $image->device->name }}</h2>
-                    <p class="text-gray-600 dark:text-gray-400 mt-1">
-                        <i class="fas fa-map-marker-alt mr-2"></i>{{ $image->device->location }}
-                    </p>
-                </div>
-                <div class="px-4 py-2 rounded-full text-sm font-bold bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                    {{ ucfirst($image->trigger_type) }}
-                </div>
-            </div>
+<div style="display:flex;flex-direction:column;gap:18px;max-width:900px;">
 
-            <!-- Image Details -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">Date & Time</p>
-                    <p class="text-lg font-bold text-gray-900 dark:text-white mt-2">
-                        {{ $image->created_at->format('M d, Y') }}
-                    </p>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {{ $image->created_at->format('H:i:s') }}
-                    </p>
-                </div>
-
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">Capture Type</p>
-                    <p class="text-lg font-bold text-gray-900 dark:text-white mt-2">
-                        @if($image->trigger_type === 'manual')
-                            <i class="fas fa-hand-paper text-blue-600 mr-2"></i>Manual
-                        @elseif($image->trigger_type === 'auto')
-                            <i class="fas fa-robot text-green-600 mr-2"></i>Automatic
-                        @else
-                            <i class="fas fa-bell text-red-600 mr-2"></i>Alert
-                        @endif
-                    </p>
-                </div>
-
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">File Size</p>
-                    <p class="text-lg font-bold text-gray-900 dark:text-white mt-2">
-                        @if($image->file_size)
-                            {{ number_format($image->file_size / 1024, 2) }} KB
-                        @else
-                            N/A
-                        @endif
-                    </p>
-                </div>
-
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">Saved Status</p>
-                    <p class="text-lg font-bold mt-2">
-                        @if($image->is_favorite)
-                            <span class="text-yellow-600"><i class="fas fa-star"></i> Saved</span>
-                        @else
-                            <span class="text-gray-600 dark:text-gray-400"><i class="fas fa-star"></i> Not Saved</span>
-                        @endif
-                    </p>
-                </div>
-            </div>
-
-            <!-- Caption -->
-            @if($image->caption)
-                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                    <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">Caption</p>
-                    <p class="text-gray-900 dark:text-white mt-2">{{ $image->caption }}</p>
-                </div>
-            @endif
-
-            <!-- Actions -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 flex gap-3 flex-wrap">
-                <form action="{{ route('camera.favorite', $image) }}" method="POST" class="flex-1 min-w-max">
-                    @csrf
-                    <button type="submit" class="w-full {{ $image->is_favorite ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-600 hover:bg-gray-700' }} text-white px-6 py-3 rounded-lg transition font-bold">
-                        <i class="fas fa-star mr-2"></i>{{ $image->is_favorite ? 'Remove from Favorites' : 'Add to Favorites' }}
-                    </button>
-                </form>
-
-                <form action="{{ route('camera.delete', $image) }}" method="POST" class="flex-1 min-w-max" onsubmit="return confirm('Delete this image permanently?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition font-bold">
-                        <i class="fas fa-trash mr-2"></i>Delete Image
-                    </button>
-                </form>
-
-                <a href="{{ route('camera.gallery', $image->device) }}" class="flex-1 min-w-max bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition font-bold text-center">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Gallery
-                </a>
-            </div>
-        </div>
+    {{-- Nav --}}
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;" class="fade-up">
+        <a href="{{ route('camera.gallery', $image->device_id) }}" class="btn btn-ghost btn-sm">
+            <i class="fas fa-arrow-left"></i> Gallery
+        </a>
+        <span style="color:var(--text-dim);">›</span>
+        <span style="font-size:12px;color:var(--text-muted);font-family:'Space Mono',monospace;">{{ $image->created_at->format('M d, Y — H:i:s') }}</span>
     </div>
 
-    <!-- Related Images -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Recent Images from {{ $image->device->name }}</h3>
-        
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            @foreach($image->device->cameraImages()->latest()->take(10)->get() as $relatedImage)
-                <a href="/camera/{{ $relatedImage->id }}" 
-                   class="group relative bg-gray-100 dark:bg-gray-700 h-24 rounded-lg overflow-hidden hover:shadow-lg transition {{ $relatedImage->id === $image->id ? 'ring-4 ring-blue-600' : '' }}">
-                    <img src="{{ $relatedImage->getImageUrl() }}" 
-                         alt="Camera capture" 
-                         class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:16px;" id="detailGrid">
+
+        {{-- Left: image --}}
+        <div class="card fade-up" style="overflow:hidden;animation-delay:.05s;">
+            <div style="position:relative;background:#000;min-height:240px;display:flex;align-items:center;justify-content:center;">
+                <img id="mainImg"
+                     src="{{ $image->getImageUrl() }}"
+                     alt="Motion capture"
+                     style="width:100%;height:auto;max-height:62vh;object-fit:contain;display:block;">
+
+                {{-- Badge --}}
+                <div style="position:absolute;top:12px;left:12px;background:{{ $sevColor }};color:{{ $severity==='warning'?'#000':'#fff' }};padding:4px 12px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:5px;letter-spacing:.05em;">
+                    <i class="fas fa-person-running" style="font-size:9px;"></i> MOTION DETECTED
+                </div>
+
+                {{-- Fullscreen button --}}
+                <button onclick="document.getElementById('mainImg').requestFullscreen()"
+                        style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.55);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;"
+                        title="View fullscreen"
+                        onmouseenter="this.style.background='rgba(0,0,0,.85)'"
+                        onmouseleave="this.style.background='rgba(0,0,0,.55)'">
+                    <i class="fas fa-expand" style="font-size:13px;"></i>
+                </button>
+            </div>
+
+            {{-- Toolbar --}}
+            <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border);">
+                <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                    <div style="font-size:11px;font-family:'Space Mono',monospace;">
+                        <span style="color:var(--text-muted);">TIME </span><span style="color:#fff;">{{ $image->created_at->format('H:i:s') }}</span>
+                    </div>
+                    <div style="font-size:11px;font-family:'Space Mono',monospace;">
+                        <span style="color:var(--text-muted);">DATE </span><span style="color:#fff;">{{ $image->created_at->format('M d, Y') }}</span>
+                    </div>
+                    @if($image->file_size)
+                    <div style="font-size:11px;font-family:'Space Mono',monospace;">
+                        <span style="color:var(--text-muted);">SIZE </span><span style="color:#fff;">{{ $image->getFileSizeHuman() }}</span>
+                    </div>
+                    @endif
+                </div>
+
+                <div style="display:flex;gap:8px;">
+                    {{-- Favorite --}}
+                    <button id="favBtn" onclick="toggleFav()"
+                            style="display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;border:1px solid {{ $image->is_favorite ? 'rgba(251,191,36,.3)' : 'var(--border)' }};background:{{ $image->is_favorite ? 'rgba(251,191,36,.08)' : 'transparent' }};cursor:pointer;font-size:12px;font-weight:600;color:{{ $image->is_favorite ? 'var(--warn)' : 'var(--text-muted)' }};font-family:'DM Sans',sans-serif;transition:all .15s;"
+                            data-fav="{{ $image->is_favorite ? '1' : '0' }}">
+                        <i class="fas fa-star" id="favStar" style="color:{{ $image->is_favorite ? 'var(--warn)' : 'var(--text-muted)' }};"></i>
+                        <span id="favLabel">{{ $image->is_favorite ? 'Saved' : 'Save' }}</span>
+                    </button>
+
+                    {{-- Download --}}
+                    <a href="{{ $image->getImageUrl() }}" download="{{ $image->filename ?? 'capture.jpg' }}"
+                       style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;text-decoration:none;font-size:12px;font-weight:600;color:var(--text-muted);transition:all .15s;"
+                       onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                       onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+
+                    {{-- Delete --}}
+                    <form method="POST" action="{{ route('camera.delete', $image) }}" onsubmit="return confirm('Delete this capture permanently?')">
+                        @csrf @method('DELETE')
+                        <button type="submit"
+                                style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.08);cursor:pointer;font-size:12px;color:var(--danger);font-family:'DM Sans',sans-serif;transition:background .15s;"
+                                onmouseenter="this.style.background='rgba(248,113,113,.2)'"
+                                onmouseleave="this.style.background='rgba(248,113,113,.08)'">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {{-- Right: sidebar --}}
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+            {{-- Linked alert --}}
+            <div class="card card-p fade-up" style="animation-delay:.08s;">
+                <div style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-triangle-exclamation" style="margin-right:6px;color:{{ $sevColor }};"></i>TRIGGER ALERT</div>
+                @if($linkedAlert)
+                    <div style="background:rgba({{ $severity==='critical'?'248,113,113':'251,191,36' }},.07);border:1px solid rgba({{ $severity==='critical'?'248,113,113':'251,191,36' }},.18);border-radius:8px;padding:12px;">
+                        <div style="font-size:13px;font-weight:700;color:{{ $sevColor }};margin-bottom:4px;">
+                            {{ $severity==='critical'?'🚨':'⚠️' }} {{ str_replace('_',' ',ucfirst($linkedAlert->type)) }}
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin:0 0 10px;">{{ $linkedAlert->message }}</p>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                            <span class="alert-pill {{ $linkedAlert->severity }}">{{ strtoupper($linkedAlert->severity) }}</span>
+                            <span style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;">{{ $linkedAlert->created_at->diffForHumans() }}</span>
+                        </div>
+                        <a href="{{ route('alerts.show', $linkedAlert) }}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;font-size:11px;">
+                            <i class="fas fa-arrow-up-right-from-square"></i> View Alert
+                        </a>
+                    </div>
+                @else
+                    <div style="text-align:center;padding:20px 10px;color:var(--text-dim);">
+                        <i class="fas fa-person-running" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>
+                        <p style="font-size:12px;margin:0;">Motion-triggered capture</p>
+                        <p style="font-size:11px;margin:4px 0 0;color:var(--text-dim);">No linked alert record</p>
+                    </div>
+                @endif
+            </div>
+
+            {{-- Device info --}}
+            <div class="card card-p fade-up" style="animation-delay:.12s;">
+                <div style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:12px;"><i class="fas fa-microchip" style="margin-right:6px;color:var(--accent);"></i>DEVICE</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div>
+                        <div style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;margin-bottom:2px;">NAME</div>
+                        <div style="font-size:13px;font-weight:600;color:#fff;">{{ $image->device->name }}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;margin-bottom:2px;">LOCATION</div>
+                        <div style="font-size:12px;color:var(--text-muted);">{{ $image->device->location }}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;margin-bottom:4px;">STATUS</div>
+                        <span class="status-pill {{ $image->device->status }}">
+                            <span class="status-dot {{ $image->device->status }}"></span>
+                            {{ ucfirst($image->device->status) }}
+                        </span>
+                    </div>
+                </div>
+                <a href="/device/{{ $image->device_id }}" class="btn btn-primary btn-sm" style="margin-top:14px;display:flex;justify-content:center;font-size:11px;">
+                    <i class="fas fa-gauge-high"></i> Monitor Device
                 </a>
-            @endforeach
+            </div>
+
+            {{-- Caption --}}
+            @if($image->caption)
+            <div class="card card-p fade-up" style="animation-delay:.16s;">
+                <div style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:8px;"><i class="fas fa-comment" style="margin-right:6px;"></i>NOTE</div>
+                <p style="font-size:13px;color:var(--text-main);line-height:1.6;margin:0;">{{ $image->caption }}</p>
+            </div>
+            @endif
+
+            {{-- Neighbor images (quick nav) --}}
+            @php
+                $prev = \App\Models\CameraImage::where('device_id', $image->device_id)
+                    ->where('id', '<', $image->id)->latest()->first();
+                $next = \App\Models\CameraImage::where('device_id', $image->device_id)
+                    ->where('id', '>', $image->id)->oldest()->first();
+            @endphp
+            @if($prev || $next)
+            <div class="card card-p fade-up" style="animation-delay:.2s;">
+                <div style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;margin-bottom:10px;"><i class="fas fa-film" style="margin-right:6px;"></i>NAVIGATE</div>
+                <div style="display:flex;gap:8px;">
+                    @if($prev)
+                    <a href="{{ route('camera.view', $prev) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;font-size:11px;">
+                        <i class="fas fa-chevron-left"></i> Older
+                    </a>
+                    @endif
+                    @if($next)
+                    <a href="{{ route('camera.view', $next) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;font-size:11px;">
+                        Newer <i class="fas fa-chevron-right"></i>
+                    </a>
+                    @endif
+                </div>
+            </div>
+            @endif
+
         </div>
     </div>
 </div>
 
+{{-- Toast --}}
+<div id="toast"
+     style="position:fixed;bottom:24px;right:24px;z-index:2000;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:500;color:#fff;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.5);transform:translateY(80px);opacity:0;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;pointer-events:none;">
+    <i id="toastIcon" class="fas fa-check-circle" style="font-size:16px;flex-shrink:0;"></i>
+    <span id="toastMsg"></span>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+const CSRF   = document.querySelector('meta[name="csrf-token"]').content;
+const imgId  = {{ $image->id }};
+let isFav    = {{ $image->is_favorite ? 'true' : 'false' }};
+
+function toggleFav() {
+    const btn   = document.getElementById('favBtn');
+    const star  = document.getElementById('favStar');
+    const label = document.getElementById('favLabel');
+    const prev  = isFav;
+
+    // Optimistic
+    isFav = !isFav;
+    applyFavUI(isFav);
+
+    fetch(`/camera/${imgId}/favorite`, {
+        method:  'POST',
+        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'Content-Type': 'application/json' }
+    })
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(data => {
+        isFav = data.is_favorite;
+        applyFavUI(isFav);
+        showToast(isFav ? '★ Saved to favorites' : 'Removed from favorites', isFav ? 'var(--warn)' : 'var(--text-muted)');
+    })
+    .catch(() => {
+        isFav = prev; // rollback
+        applyFavUI(isFav);
+        showToast('Failed — try again', 'var(--danger)');
+    });
+}
+
+function applyFavUI(fav) {
+    const btn   = document.getElementById('favBtn');
+    const star  = document.getElementById('favStar');
+    const label = document.getElementById('favLabel');
+    star.style.color        = fav ? 'var(--warn)' : 'var(--text-muted)';
+    label.textContent       = fav ? 'Saved' : 'Save';
+    btn.style.color         = fav ? 'var(--warn)' : 'var(--text-muted)';
+    btn.style.borderColor   = fav ? 'rgba(251,191,36,.3)' : 'var(--border)';
+    btn.style.background    = fav ? 'rgba(251,191,36,.08)' : 'transparent';
+}
+
+let toastT = null;
+function showToast(msg, color) {
+    const toast = document.getElementById('toast');
+    const icon  = document.getElementById('toastIcon');
+    document.getElementById('toastMsg').textContent = msg;
+    icon.style.color = color || '#fff';
+    icon.className   = color === 'var(--danger)' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+    toast.style.transform = 'translateY(0)'; toast.style.opacity = '1';
+    clearTimeout(toastT);
+    toastT = setTimeout(() => { toast.style.transform = 'translateY(80px)'; toast.style.opacity = '0'; }, 3000);
+}
+
+// Responsive grid
+function adjGrid() {
+    const g = document.getElementById('detailGrid');
+    if (g) g.style.gridTemplateColumns = window.innerWidth < 768 ? '1fr' : '1fr 280px';
+}
+adjGrid(); window.addEventListener('resize', adjGrid);
+</script>
 @endsection
